@@ -16,5 +16,10 @@ langgraph>=1.2
 qdrant-client>=1.19
 langchain-qdrant>=1.1
 
+# RAG：本地 BGE-M3 Embedding 与文档分块（Phase 4）
+langchain-text-splitters>=1.0
+langchain-huggingface>=1.0
+sentence-transformers>=3.0
+
 # 环境变量管理
 python-dotenv>=1.0

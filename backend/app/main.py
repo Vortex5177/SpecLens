@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
+from app.api.knowledge import router as knowledge_router
 from app.api.project import router as project_router
 from app.api.version import router as version_router
 
@@ -29,3 +30,5 @@ app.add_middleware(
 app.include_router(health_router, prefix="/api")
 app.include_router(version_router, prefix="/api")
 app.include_router(project_router, prefix="/api")
+# knowledge 路由自带 /api/knowledge 前缀，此处不再叠加
+app.include_router(knowledge_router)

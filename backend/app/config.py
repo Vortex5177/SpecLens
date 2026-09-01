@@ -35,3 +35,20 @@ DEPENDENCY_FILES = {
 
 # 文件树展示上限（避免超大项目撑爆响应）
 MAX_TREE_ENTRIES = 500
+
+# ===== RAG / 知识库（Phase 4）=====
+# 预置知识库目录（按 technology/version 组织）
+KNOWLEDGE_DIR = Path(os.getenv("KNOWLEDGE_DIR", Path(__file__).resolve().parents[2] / "knowledge"))
+# Qdrant 服务地址（本地原生运行默认 6333；禁止使用嵌入式 :memory:）
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+# 官方文档 collection 名称
+QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "official_docs")
+# BGE-M3 向量维度（模型固定 1024 维，不得修改）
+BGE_M3_DIM = 1024
+# Embedding 模型（本地运行；国内网络可在 .env 中设置 HF_ENDPOINT=https://hf-mirror.com）
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
+# 可入库的知识库文档扩展名（其余文件跳过）
+KNOWLEDGE_EXTENSIONS = {".md", ".txt", ".rst"}
+# 分块参数：每块目标字符数与重叠（中文文档按字符计）
+CHUNK_SIZE = 400
+CHUNK_OVERLAP = 60
