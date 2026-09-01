@@ -88,11 +88,10 @@ copy .env.example .env             # 然后填入 DEEPSEEK_API_KEY
 
 ### 2. 知识库入库
 
-向 `knowledge/` 放入文档后调用一次：
+两种方式：
 
-```
-POST /api/knowledge/ingest
-```
+- **手动放文件 + 全量入库**：向 `knowledge/` 放入文档后调用 `POST /api/knowledge/ingest`
+- **接口上传**：`POST /api/knowledge/documents`（multipart），指定 `source_type`（official/security），official 还需指定 `technology` 与 `version`；文档保存后立即增量入库，无需再调 ingest
 
 目录结构即元数据：`knowledge/official/fastapi/0.120/xxx.md` 的每个分块会携带 `technology=fastapi, version=0.120`。重复入库幂等（确定性块 ID）。首次调用需加载 BGE-M3 模型（约 2.3GB，首次从 HuggingFace 下载）。
 
@@ -131,7 +130,8 @@ npm run dev
 | POST | `/api/projects/upload` | 上传项目 zip，返回结构分析与版本识别 |
 | GET | `/api/projects/{project_id}` | 查询项目分析结果 |
 | POST | `/api/projects/{project_id}/versions` | 确认 / 覆盖技术版本 |
-| POST | `/api/knowledge/ingest` | 扫描 knowledge/ 并入库 Qdrant |
+| POST | `/api/knowledge/ingest` | 扫描 knowledge/ 并全量入库 Qdrant |
+| POST | `/api/knowledge/documents` | 上传知识文档（指定 technology/version）并即时入库 |
 | GET | `/api/knowledge/search` | 版本敏感的官方文档检索（technology + version 必填） |
 | GET | `/api/knowledge/search/security` | 安全规范语义检索 |
 | POST | `/api/reviews` | 创建并同步执行 Code Review |

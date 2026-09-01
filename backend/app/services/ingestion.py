@@ -125,28 +125,45 @@ def _collect_security_documents() -> list[Document]:
     return documents
 
 
+def _write_documents(collection: str, documents: list[Document]) -> None:
+    """将带向量的 Document 批量写入指定 collection（QdrantVectorStore 封装 Embedding + 写入）。"""
+    if not documents:
+        return
+    from langchain_qdrant import QdrantVectorStore
+
+    client = get_qdrant_client()
+    ensure_collections(client)
+    store = QdrantVectorStore(
+        client=client,
+        collection_name=collection,
+        embedding=get_embeddings(),
+    )
+    store.add_documents(documents, batch_size=16)
+
+
+def ingest_document(file_path: Path, metadata: dict) -> int:
+    """增量入库单个知识文件（用户上传文档后即时可检索，规格第 11 节）。
+
+    按 metadata 中的 source_type 选择 collection；确定性 ID 保证重复上传幂等。
+    返回写入的分块数。
+    """
+    documents = _chunk_file(file_path, metadata)
+    collection = (
+        config.QDRANT_SECURITY_COLLECTION
+        if metadata.get("source_type") == "security"
+        else config.QDRANT_COLLECTION
+    )
+    _write_documents(collection, documents)
+    return len(documents)
+
+
 def ingest_knowledge() -> dict:
     """执行一次全量入库（官方文档 + 安全规范），返回统计信息。"""
     official_docs = _collect_official_documents()
     security_docs = _collect_security_documents()
-    client = get_qdrant_client()
-    ensure_collections(client)
 
-    # QdrantVectorStore 封装 Embedding + 批量写入
-    from langchain_qdrant import QdrantVectorStore
-
-    def _write(collection: str, documents: list[Document]) -> None:
-        if not documents:
-            return
-        store = QdrantVectorStore(
-            client=client,
-            collection_name=collection,
-            embedding=get_embeddings(),
-        )
-        store.add_documents(documents, batch_size=16)
-
-    _write(config.QDRANT_COLLECTION, official_docs)
-    _write(config.QDRANT_SECURITY_COLLECTION, security_docs)
+    _write_documents(config.QDRANT_COLLECTION, official_docs)
+    _write_documents(config.QDRANT_SECURITY_COLLECTION, security_docs)
 
     return {
         "official": {
