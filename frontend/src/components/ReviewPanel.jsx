@@ -111,7 +111,11 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
         </label>
       </div>
 
-      {mode === "migration" && (
+      {mode === "migration" && versions.length === 0 && (
+        <p className="hint">Migration 需要已确认的当前版本：请先在版本面板中手动添加技术与版本</p>
+      )}
+
+      {mode === "migration" && versions.length > 0 && (
         <div className="migration-targets">
           <p className="hint">
             填写迁移目标版本（至少一个）；留空的技术不参与迁移
@@ -152,6 +156,12 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
       <button type="button" onClick={handleStart} disabled={running || !reviewEnabled}>
         {running ? runningLabel : startLabel}
       </button>
+      {mode === "code_review" && versions.length === 0 && (
+        <p className="hint">
+          未提供任何技术版本信息：本次审查将基于安全规范与模型自身知识（不做版本敏感的官方文档检索，
+          依据标注为 llm_inference）。如需版本依据，可在上方版本面板手动添加。
+        </p>
+      )}
       {!reviewEnabled && (
         <p className="hint">请先确认所有待确认的技术版本</p>
       )}

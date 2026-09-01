@@ -209,6 +209,34 @@ h1 {
   cursor: not-allowed;
 }
 
+/* ===== 手动添加技术（未检测到依赖文件时使用）===== */
+.manual-add {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.manual-add input {
+  padding: 6px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.manual-add button {
+  padding: 6px 16px;
+  border: 1px solid #1677ff;
+  border-radius: 6px;
+  background: #fff;
+  color: #1677ff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.manual-add button:hover {
+  background: #e6f4ff;
+}
+
 /* ===== 审查模式面板 ===== */
 .review-panel {
   margin-top: 24px;
@@ -462,4 +490,105 @@ h1 {
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* ===== 本地知识库文档清单 ===== */
+.knowledge-card {
+  margin-top: 24px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  text-align: left;
+}
+
+.knowledge-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.knowledge-header h2 {
+  margin: 0;
+}
+
+.knowledge-header button {
+  padding: 4px 16px;
+  border: 1px solid #1677ff;
+  border-radius: 6px;
+  background: #fff;
+  color: #1677ff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.knowledge-header button:hover:not(:disabled) {
+  background: #e6f4ff;
+}
+
+.knowledge-card h3 {
+  font-size: 14px;
+  margin: 16px 0 8px;
+}
+
+.knowledge-card .version-table {
+  margin-top: 0;
+}
+
+/* 添加文档表单 */
+.knowledge-add {
+  margin: 12px 0 4px;
+  padding: 14px 16px;
+  background: #fafafa;
+  border-radius: 8px;
+}
+
+.knowledge-add-fields {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.knowledge-add input[type="text"] {
+  padding: 6px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.knowledge-add button {
+  padding: 6px 18px;
+  border: none;
+  border-radius: 6px;
+  background: #1677ff;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.knowledge-add button:disabled {
+  background: #91caff;
+  cursor: not-allowed;
+}
+
+.ok {
+  color: #389e0d;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.delete-btn {
+  padding: 2px 12px;
+  border: 1px solid #ff4d4f;
+  border-radius: 6px;
+  background: #fff;
+  color: #ff4d4f;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #fff1f0;
 }

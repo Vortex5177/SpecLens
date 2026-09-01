@@ -49,7 +49,7 @@ function ProjectInfo({ analysis, onVersionsConfirmed }) {
         <p className="hint">未检测到依赖描述文件</p>
       )}
 
-      {analysis.versions && analysis.versions.length > 0 && (
+      {analysis.versions && (
         <VersionPanel
           key={analysis.project_id}
           versions={analysis.versions}

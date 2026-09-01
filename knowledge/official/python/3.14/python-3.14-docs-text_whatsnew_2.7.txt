@@ -1,0 +1,2155 @@
+Python 2.7 有什么新变化
+***********************
+
+作者:
+   A.M. Kuchling (amk at amk.ca)
+
+本文介绍了Python 2.7 的新功能。 Python 2.7 于2010年7月3日发布。
+
+数字处理在许多方面得到了改进，包括浮点数和 "Decimal" 类。标准库中有一
+些有用的补充，例如大大增强的 "unittest" 模块，用于解析命令行选项的
+"argparse" 模块，在 "collections" 模块中方便的 "OrderedDict" 和
+"Counter" 类，以及许多其他改进。
+
+Python 2.7计划成为2.x版本的最后一个发布版本，因此我们努力使其成为长期
+支持的好版本。为了帮助迁移到Python 3，我们在2.7中包含了几个来自Python
+3.x系列的新特性。
+
+本文并不试图提供新特性的完整规范说明，而是提供一个方便的概览。要了解完
+整的细节，请参阅Python 2.7的文档。如果你想了解有关设计和实现的具体考量
+，请参阅特定新特性的PEP或在https://bugs.python.org上讨论更改的问题。在
+可能的情况下，“What's New in Python”链接到每个更改的错误修正/补丁项。
+
+
+Python 2.x的未来
+================
+
+Python 2.7 是 2.x 系列中的最后一个主版本，因为Python 维护人员已将新功
+能开发工作的重点转移到了 Python 3.x 系列中。这意味着，尽管 Python 2 会
+继续修复bug并更新，以便在新的硬件和支持操作系统版本上正确构建，但不会
+有新的功能发布。
+
+然而，尽管在 Python 2.7 和 Python 3 之间有一个很大的公共子集，并且迁移
+到该公共子集或直接迁移到 Python 3 所涉及的许多更改可以安全地自动化完成
+。但是一些其他更改（特别是那些与Unicode处理相关的更改）可能需要仔细考
+虑，并且最好用自动化回归测试套件进行健壮性测试，以便有效地迁移。
+
+这意味着 Python2.7 将长期保留，为尚未移植到 Python 3 的生产系统提供一
+个稳定且受支持的基础平台。Python 2.7系列的预期完整生命周期在 **PEP
+373** 中有详细介绍。
+
+长期保留 2.7 版的一些关键后果：
+
+* 如上所述，与早期的2.x版本相比，2.7版本的维护时间更长。目前，预计核心
+  开发团队将继续支持Python 2.7（接收安全更新和其他错误修复），直到至少
+  2020年（首次发布后10年，相比之下，通常的支持期为18--24个月）。
+
+* 随着 Python 2.7 标准库的老化，有效地利用 Python 包索引（直接或通过重
+  新分发者）对 Python 2 用户来说变得更加重要。除了各种任务的第三方包之
+  外，可用的包还包括与 Python 2 兼容的 Python 3 标准库中的新模块和功能
+  的后端移植，以及各种工具和库，这些工具和库可以让用户更容易迁移到
+  Python 3。 Python 包用户指南 提供了从 Python 包索引的下载和安装软件
+  的指导。
+
+* 虽然现在增强 Python 2 的首选方法是在Python包索引上发布新包，但这种方
+  法不一定适用于所有情况，尤其是与网络安全相关的情况。在一些特殊情况下
+  ，如果在PyPI上发布新的或更新的包无法得到充分的处理，则可以使用Python
+  增强建议过程来提出直接在Python 2标准库中添加新功能。任何此类添加及其
+  添加的维护版本将在下面的 Python 2.7 维护版本中添加的新特性 部分中注
+  明。
+
+对于希望从 Python2 迁移到 Python3 的项目，或者对于希望同时支持 Python2
+和 Python3 用户的库和框架开发人员，可以使用各种工具和指南来帮助决定合
+适的方法并管理所涉及的一些技术细节。建议从 如何将 Python 2 代码移植到
+Python 3 操作指南开始。
+
+
+对于弃用警告处理方式的改变
+==========================
+
+对于 Python 2.7，一个策略决定是默认情况下禁止只对开发人员有兴趣的警告
+。 现在，除非另有要求，否则将忽略 "DeprecationWarning" 及其子类，以防
+止用户看到应用程序触发的警告。 这个更改也在成为Python 3.2 的分歧点上进
+行了。 （在 stdlib-sig 上进行了讨论，并在 bpo-7319 中执行。）
+
+在以前的版本中，默认情况下启用了 "DeprecationWarning" 消息，为 Python
+开发人员提供了一个明确的指示，说明他们的代码可能在未来的 Python 主要版
+本中出现问题。
+
+然而，越来越多基于 Python 的应用程序的用户并不直接参与这些应用程序的开
+发。 "DeprecationWarning" 消息与这些用户无关，这让他们担心应用能否真正
+正常工作，并让应用开发人员承担起回应这些担忧的负担。
+
+显示通过使用 "-Wdefault" (简写: "-Wd") 开关运行 Python，或者在运行
+Python 之前将 "PYTHONWARNINGS" 环境变量设置为 ""default"" (或 ""d"")，
+可以重新启用 "DeprecationWarning" 消息。 Python 代码也可以通过调用
+"warnings.simplefilter('default')" 重新启用它们。
+
+"unittest" 模块还会在运行测试时自动重新启用弃用警告。
+
+
+Python 3.1 特性
+===============
+
+就像 Python2.6 集成了 Python3.0 的特性一样，2.7版也集成了 Python3.1 中
+的一些新特性。2.x 系列继续提供迁移到3.x系列的工具。
+
+3.1 功能的部分列表，这些功能已反向移植到 2.7：
+
+* 用于集合字面值的语法 ("{1,2,3}" 是一个可变集合)。
+
+* 字典与集合推导式 ("{i: i*2 for i in range(3)}")。
+
+* 单个 "with" 语句中使用多个上下文管理器。
+
+* 一个 "io" 库的新版本，用 C 重写以提升性能。
+
+* PEP 372：将有序字典添加到 collections 所描述的有序字典类型。
+
+* PEP 378: 千位分隔符的格式说明符 所描述的新的 "","" 格式说明符。
+
+* "memoryview" 对象。
+
+* "importlib" 模块的一个较小子集，如下所述。
+
+* 在很多情况下，浮点数 "x" 的 "repr()" 更短：现在它基于最短的十进制字
+  符串 ，保证四舍五入到 "x"。  与 Python 以前的版本一样，保证
+  "float(repr(x))" 能恢复到 "x"。
+
+* 浮点数到字符串和字符串到浮点数的转换已正确舍入。 "round()" 函数现在
+  也能正确舍入。
+
+* "PyCapsule" 类型，用于为扩展模块提供 C API 。
+
+* "PyLong_AsLongAndOverflow()" C API 函数 。
+
+其他新的 Python3 模式警告包括：
+
+* "operator.isCallable()" 和 "operator.sequenceIncludes()" 在 3.x 中不
+  支持，现在会触发警告。
+
+* "-3" 开关现在会自动启用 "-Qwarn" 开关，该开关会在使用经典整除法处理
+  整数和长整数时发出警告。
+
+
+PEP 372：将有序字典添加到 collections
+=====================================
+
+常规 Python 字典以任意顺序遍历键/值对。 多年来，许多作者编写了替代实现
+，以记住键最初插入的顺序。 基于这些实现的经验，2.7 在 "collections" 模
+块中引入了一个新的 "OrderedDict" 类。
+
+"OrderedDict" API 提供与普通字典相同的接口 ，但会根据键首次插入的时间
+，按一定顺序遍历键和值:
+
+   >>> from collections import OrderedDict
+   >>> d = OrderedDict([('first', 1),
+   ...                  ('second', 2),
+   ...                  ('third', 3)])
+   >>> d.items()
+   [('first', 1), ('second', 2), ('third', 3)]
+
+如果新条目覆盖了现有条目，则原插入位置保持不变
+
+   >>> d['second'] = 4
+   >>> d.items()
+   [('first', 1), ('second', 4), ('third', 3)]
+
+删除条目并重新插入会将其移至末尾
+
+   >>> del d['second']
+   >>> d['second'] = 5
+   >>> d.items()
+   [('first', 1), ('third', 3), ('second', 5)]
+
+"popitem()" 方法有一个可选 *last* 参数 ，默认为 "True" 。如果 *last*
+为 true ，则返回并删除最近添加的键；如果为 false ，则选择最旧的键:
+
+   >>> od = OrderedDict([(x,0) for x in range(20)])
+   >>> od.popitem()
+   (19, 0)
+   >>> od.popitem()
+   (18, 0)
+   >>> od.popitem(last=False)
+   (0, 0)
+   >>> od.popitem(last=False)
+   (1, 0)
+
+比较两个有序字典会同时检查键和值，并要求插入顺序相同
+
+   >>> od1 = OrderedDict([('first', 1),
+   ...                    ('second', 2),
+   ...                    ('third', 3)])
+   >>> od2 = OrderedDict([('third', 3),
+   ...                    ('first', 1),
+   ...                    ('second', 2)])
+   >>> od1 == od2
+   False
+   >>> # 将 'third' 键移动到末尾
+   >>> del od2['third']; od2['third'] = 3
+   >>> od1 == od2
+   True
+
+将 "OrderedDict" 与普通字典进行比较时，会忽略插入顺序，只比较键和值。
+
+"OrderedDict" 是如何工作的？它维护一个键的双链路列表，在插入新键时将其
+添加到列表中。二级字典 将键映射到其对应的列表节点 ，因此删除时不必遍历
+整个链接列表，从而保持 *O*(1)。
+
+现在，标准库支持在多个模块 中使用有序字典。
+
+* "ConfigParser" 模块默认使用它们，这意味着现在可以按照原来的顺序读取
+  、修改和写回配置文件。
+
+* "collections.namedtuple()" 的 "_asdict()" 方法现在返回一个有序字典，
+  其中的值按照底层元组索引的顺序出现。
+
+* "json" 模块的 "JSONDecoder" 类构造器扩展了一个 *object_pairs_hook*
+  形参 ，允许解码器构建 "OrderedDict" 实例。此外，还添加了对第三方工具
+  的支持，如 PyYAML 。
+
+参见:
+
+  **PEP 372** - 将有序词典添加到集合中
+     PEP 由 Armin Ronacher 和 Raymond Hettinger 撰写，由 Raymond
+     Hettinger 实现。
+
+
+PEP 378: 千位分隔符的格式说明符
+===============================
+
+为了使程序输出更易读，可以在大数字上添加分隔符，将其显示为
+18,446,744,073,709,551,616 而不是 18446744073709551616。
+
+完全通用的解决方案是 "locale" 模块 ，它可以使用不同的分隔符（北美为","
+，欧洲为"."）和不同的分组大小，但 "locale" 使用起来比较复杂，而且不适
+合多线程应用程序，因为不同的线程会为不同的本地生成输出。
+
+因此，在 "str.format()" 方法使用的迷你语言中添加了一个简单的逗号分组机
+制。 在格式化浮点数时，只需在宽度和精度之间加上逗号
+
+   >>> '{:20,.2f}'.format(18446744073709551616.0)
+   '18,446,744,073,709,551,616.00'
+
+格式化整数时，在宽度后面加上逗号：
+
+>>> '{:20,d}'.format(18446744073709551616)
+'18,446,744,073,709,551,616'
+
+这种机制完全没有适应性；逗号总是用作分隔符，分组总是以三位数为一组。
+逗号格式机制不如 "locale" 模块通用，但使用起来更方便。
+
+参见:
+
+  **PEP 378** - 千位分隔符的格式说明符
+     PEP 由 Raymond Hettinger 撰写，由 Eric Smith 实现。
+
+
+PEP 389：用于解析命令行的 argparse 模块
+=======================================
+
+用于解析命令行参数的 "argparse" 模块是作为 "optparse" 模块更强大的替代
+功能而添加的。
+
+这意味着 Python 现在支持三个不同的用来解析命令行参数的模块: "getopt",
+"optparse" 和 "argparse"。 "getopt" 模块非常接近 C 库的 "getopt()" 函
+数，因此它在你编写最终要用 C 来重新编写的 Python 原型代码时很有用处。
+"optparse" 已经变得冗余，但并没有移除它的计划因为许多脚本仍然在使用它
+，并且也没有自动化更新这些脚本的方式。 （让 "argparse" API 与
+"optparse" 的接口保持一致的提议曾被讨论但因过于繁琐和困难而被拒绝。）
+
+简而言之，如果你是在编写新脚本并且不需要担心与 Python 较早版本的兼容性
+，请使用 "argparse" 而不是 "optparse"。
+
+以下是为示例代码:
+
+   import argparse
+
+   parser = argparse.ArgumentParser(description='命令行示例。')
+
+   # 添加可选开关
+   parser.add_argument('-v', action='store_true', dest='is_verbose',
+                       help='生成详细输出')
+   parser.add_argument('-o', action='store', dest='output',
+                       metavar='FILE',
+                       help='将输出重定向到 FILE 而不是 stdout')
+   parser.add_argument('-C', action='store', type=int, dest='context',
+                       metavar='NUM', default=0,
+                       help='显示 NUM 行的附加上下文')
+
+   # 允许任意数量的附加参数。
+   parser.add_argument(nargs='*', action='store', dest='inputs',
+                       help='输入文件名（默认为 stdin）')
+
+   args = parser.parse_args()
+   print args.__dict__
+
+除非你覆盖它，否则会自动添加 "-h" 和 "--help" 开关，并产生格式化良好的
+输出:
+
+   -> ./python.exe argparse-example.py --help
+   usage: argparse-example.py [-h] [-v] [-o FILE] [-C NUM] [inputs [inputs ...]]
+
+   Command-line example.
+
+   positional arguments:
+     inputs      input filenames (default is stdin)
+
+   optional arguments:
+     -h, --help  show this help message and exit
+     -v          produce verbose output
+     -o FILE     direct output to FILE instead of stdout
+     -C NUM      display NUM lines of added context
+
+与 "optparse" 一样，命令行开关和参数将返回为一个具有通过 *dest* 形参所
+指定的属性的对象:
+
+   -> ./python.exe argparse-example.py -v
+   {'output': None,
+    'is_verbose': True,
+    'context': 0,
+    'inputs': []}
+
+   -> ./python.exe argparse-example.py -v -o /tmp/output -C 4 file1 file2
+   {'output': '/tmp/output',
+    'is_verbose': True,
+    'context': 4,
+    'inputs': ['file1', 'file2']}
+
+"argparse" 模块提供了比 "optparse" 更强大的参数验证功能：你可以通过指
+定整数来要求精确数量的参数，使用 "'*'" 表示接受零个或多个参数，使用
+"'+'" 表示接受一个或多个参数，或者使用 "'?'" 表示可选参数。顶层解析器
+还可以包含子解析器，用于定义具有不同开关选项集的子命令（例如 "svn
+commit"、"svn checkout" 等）。此外，你可以将参数类型指定为 "FileType"
+，该类型会自动为你打开文件，并理解 "'-'" 表示标准输入或输出。
+
+参见:
+
+  "argparse" 文档
+     argparse 模块的文档页面。
+
+  将 optparse 代码迁移至 argparse
+     Python 文档的一部分，描述如何转换使用了 "optparse" 的代码。
+
+  **PEP 389** - argparse - 新的命令行解析模块
+     PEP 由 Steven Bethard 撰写并实现。
+
+
+PEP 391: 基于字典的日志配置
+===========================
+
+"logging" 模块非常灵活；应用程序可以定义一个日志子系统树，树中的每个记
+录器可以过滤掉某些消息，以不同的方式格式化它们，并将消息定向到不同数量
+的处理器。
+
+所有这些灵活性可能需要大量的配置。你可以编写Python语句来创建对象并设置
+它们的属性，但复杂的设置需要冗长但乏味的代码。"logging" 还支持一个
+"fileConfig()" 函数，该函数解析一个文件，但文件格式不支持配置过滤器，
+并且通过程序生成会更混乱。
+
+Python 2.7 添加了一个 "dictConfig()" 函数，该函数使用字典来配置日志记
+录。有多种方法可以从不同来源生成字典：使用代码构造一个；解析包含 JSON
+的文件；或者如果安装了 YAML 解析库，则使用该库。更多信息请参见 配置函
+数。
+
+以下示例配置了两个日志记录器，根日志记录器和一个名为 "network" 的日志
+记录器。发送到根日志记录器的消息将使用 syslog 协议发送到系统日志，而发
+送到 "network" 日志记录器的消息将写入一个 "network.log" 文件，当日志达
+到 1MB 时将进行轮转。
+
+   import logging
+   import logging.config
+
+   configdict = {
+    'version': 1,    # 使用的配置模式；目前必须是 1
+    'formatters': {
+        'standard': {
+            'format': ('%(asctime)s %(name)-15s '
+                       '%(levelname)-8s %(message)s')}},
+
+    'handlers': {'netlog': {'backupCount': 10,
+                        'class': 'logging.handlers.RotatingFileHandler',
+                        'filename': '/logs/network.log',
+                        'formatter': 'standard',
+                        'level': 'INFO',
+                        'maxBytes': 1000000},
+                 'syslog': {'class': 'logging.handlers.SysLogHandler',
+                            'formatter': 'standard',
+                            'level': 'ERROR'}},
+
+    # 指定所有子日志记录器
+    'loggers': {
+                'network': {
+                            'handlers': ['netlog']
+                }
+    },
+    # 指定根日志记录器的属性
+    'root': {
+             'handlers': ['syslog']
+    },
+   }
+
+   # 设置配置
+   logging.config.dictConfig(configdict)
+
+   # 作为示例，记录两个错误消息
+   logger = logging.getLogger('/')
+   logger.error('数据库未找到')
+
+   netlogger = logging.getLogger('network')
+   netlogger.error('连接失败')
+
+Vinay Sajip 实现的对 "logging" 模块的三项较小增强是：
+
+* "SysLogHandler" 类现在支持通过 TCP 进行系统日志记录。构造函数有一个
+  *socktype* 参数，用于指定要使用的套接字类型，可以是
+  "socket.SOCK_DGRAM" 用于 UDP 或 "socket.SOCK_STREAM" 用于 TCP。默认
+  协议仍然是 UDP。
+
+* "Logger" 实例新增了一个 "getChild()" 方法，用于通过相对路径检索子日
+  志记录器。例如，一旦通过 "log = getLogger('app')" 获取日志记录器，调
+  用 "log.getChild('network.listen')" 等同于
+  "getLogger('app.network.listen')"。
+
+* "LoggerAdapter" 类新增了一个 "isEnabledFor()" 方法，该方法接受一个
+  *level* 参数，并返回底层日志记录器是否会处理该级别重要性的消息。
+
+参见:
+
+  **PEP 391** - 基于字典的日志配置
+     PEP 由 Vinay Sajip 撰写并实现。
+
+
+PEP 3106: 字典视图
+==================
+
+字典方法 "keys()"、 "values()" 和 "items()" 在 Python 3.x 有所不同。
+它们将返回名为 *view* 的对象而不是完整的列表。
+
+在 Python 2.7 中不可能改变 "keys()"、 "values()" 和 "items()" 的返回值
+因为那会破坏大量已有代码。 作为替代 3.x 版本是以新名称 "viewkeys()"、
+"viewvalues()" 和 "viewitems()" 添加的。
+
+   >>> d = dict((i*10, chr(65+i)) for i in range(26))
+   >>> d
+   {0: 'A', 130: 'N', 10: 'B', 140: 'O', 20: ..., 250: 'Z'}
+   >>> d.viewkeys()
+   dict_keys([0, 130, 10, 140, 20, 150, 30, ..., 250])
+
+视图可以被迭代，但键和条目视图的行为也很像是集合。 "&" 运算符执行交集
+运算，"|" 执行并集运算:
+
+   >>> d1 = dict((i*10, chr(65+i)) for i in range(26))
+   >>> d2 = dict((i**.5, i) for i in range(1000))
+   >>> d1.viewkeys() & d2.viewkeys()
+   set([0.0, 10.0, 20.0, 30.0])
+   >>> d1.viewkeys() | range(0, 30)
+   set([0, 1, 130, 3, 4, 5, 6, ..., 120, 250])
+
+视图会追踪字典及字典被修改时的内容变化:
+
+   >>> vk = d.viewkeys()
+   >>> vk
+   dict_keys([0, 130, 10, ..., 250])
+   >>> d[260] = '&'
+   >>> vk
+   dict_keys([0, 130, 260, 10, ..., 250])
+
+但是，请注意在对视图进行迭代时你是不能添加或移除键的:
+
+   >>> for k in vk:
+   ...     d[k*2] = k
+   ...
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   RuntimeError: dictionary changed size during iteration
+
+你可以在 Python 2.x 代码中使用视图方法，2to3 转换器会将它们更改为标准
+的 "keys()"、"values()" 和 "items()" 方法。
+
+参见:
+
+  **PEP 3106** - 改造 dict.keys()、 .values() 和 .items()
+     PEP 由 Guido van Rossum 撰写。 由 Alexandre Vassalotti 反向移植到
+     2.7；参见 bpo-1967。
+
+
+PEP 3137: memoryview 对象
+=========================
+
+"memoryview" 对象提供与 "bytes" 类型的接口相匹配的另一个对象的内存内容
+的视图。
+
+   >>> import string
+   >>> m = memoryview(string.letters)
+   >>> m
+   <memory at 0x37f850>
+   >>> len(m)           # 返回底层对象的长度
+   52
+   >>> m[0], m[25], m[26]   # 索引返回一个字节
+   ('a', 'z', 'A')
+   >>> m2 = m[0:26]         # 切片返回另一个 memoryview
+   >>> m2
+   <memory at 0x37f080>
+
+视图的内容可被转换为一个字节串或整数列表：
+
+   >>> m2.tobytes()
+   'abcdefghijklmnopqrstuvwxyz'
+   >>> m2.tolist()
+   [97, 98, 99, 100, 101, 102, 103, ... 121, 122]
+   >>>
+
+"memoryview" 对象允许对属于可变对象的下层对象进行修改。
+
+   >>> m2[0] = 75
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+   TypeError: cannot modify read-only memory
+   >>> b = bytearray(string.letters)  # 创建一个可变对象
+   >>> b
+   bytearray(b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+   >>> mb = memoryview(b)
+   >>> mb[0] = '*'         # 通过视图赋值，改变字节序列。
+   >>> b[0:5]              # 字节序列已被改变。
+   bytearray(b'*bcde')
+   >>>
+
+参见:
+
+  **PEP 3137** - 不变字节和可变缓冲区
+     PEP 由 Guido van Rossum 撰写。 由 Travis Oliphant、 Antoine
+     Pitrou 等人实现。 由 Antoine Pitrou 向下移植到 2.7; 参见 bpo-2396
+     。
+
+
+其他语言特性修改
+================
+
+对Python 语言核心进行的小改动：
+
+* 已从 Python 3.x 向下移植了集合字面值语法。 使用花括号来标记可变集合
+  的内容；集合与字典的区别在于它不包含冒号及映射的值。 "{}" 仍然表示空
+  字典；请使用 "set()" 来表示空集合。
+
+     >>> {1, 2, 3, 4, 5}
+     set([1, 2, 3, 4, 5])
+     >>> set() # 空集合
+     set([])
+     >>> {}    # 空字典
+     {}
+
+  由 Alexandre Vassalotti 向下移植;参见 bpo-2335。
+
+* 字典与集合推导式是另一个从 3.x 向下移植的特性，对列表/生成器推导式进
+  行泛化以针对集合与字典使用字面值语法。
+
+     >>> {x: x*x for x in range(6)}
+     {0: 0, 1: 1, 2: 4, 3: 9, 4: 16, 5: 25}
+     >>> {('a'*x) for x in range(6)}
+     set(['', 'a', 'aa', 'aaa', 'aaaa', 'aaaaa'])
+
+  由 Alexandre Vassalotti 向下移植;参见 bpo-2333。
+
+* 现在 "with" 语句可以在一个语句中使用多个上下文管理器。 上下文管理器
+  将按从左到右的顺序处理并且每个都会被视为开始一个新的 "with" 语句。
+  这意味着:
+
+     with A() as a, B() as b:
+         ... 一系列语句 ...
+
+  相当于:
+
+     with A() as a:
+         with B() as b:
+             ... 一系列语句 ...
+
+  "contextlib.nested()" 函数提供了非常类似的功能，因此它不再必要并已被
+  弃用。
+
+  （提议于 https://codereview.appspot.com/53094；由 Georg Brandl 实现
+  。）
+
+* 在大多数平台上，浮点数和字符串之间的转换现在正确地四舍五入。这些转换
+  发生在许多不同的地方：对浮点数和复数的 "str()"；"float" 和 "complex"
+  构造函数；数值格式化；使用 "marshal"、"pickle" 和 "json" 模块序列化
+  和反序列化浮点数和复数；在 Python 代码中解析浮点数和虚数字面量；以及
+  "Decimal" 到浮点数的转换。
+
+  与此相关，浮点数 *x* 的 "repr()" 现在返回基于最短十进制字符串的结果
+  ，该字符串保证在正确四舍五入（采用四舍六入五成双模式）的情况下能返回
+  到 *x*。之前它给出的是基于将 x 四舍五入到 17 位小数的字符串。
+
+  负责此改进的舍入库在 Windows 和 Unix 平台上使用 gcc、icc 或 suncc 编
+  译器工作。 可能有一些平台无法保证此代码的正确运行，因此在这些系统上
+  不使用此代码。 你可以通过检查 "sys.float_repr_style" 来了解正在使用
+  的代码，如果使用新代码则为 "short"，未使用则为 "legacy"。
+
+  由Eric Smith和Mark Dickinson实现，使用David Gay的 "dtoa.c" 库；参见
+  bpo-7117。
+
+* 从长整数和普通整数转换为浮点数现在有不同的舍入方式，返回最接近该数的
+  浮点数。对于可以精确转换的小整数，这无关紧要，但对于不可避免会丢失精
+  度的大数，Python 2.7现在更接近真实值。例如，Python 2.6计算如下:
+
+     >>> n = 295147905179352891391
+     >>> float(n)
+     2.9514790517935283e+20
+     >>> n - long(float(n))
+     65535L
+
+  Python 2.7的浮点结果更大，但更接近真实值:
+
+     >>> n = 295147905179352891391
+     >>> float(n)
+     2.9514790517935289e+20
+     >>> n - long(float(n))
+     -1L
+
+  （由Mark Dickinson实现；参见 bpo-3166。）
+
+  整数除法在舍入行为上也更准确。（也由Mark Dickinson实现；参见
+  bpo-1811。）
+
+* 已移除复数的隐式强制转换；解释器将不再尝试调用复数对象上的
+  "__coerce__()" 方法。（由Meador Inge和Mark Dickinson移除；参见
+  bpo-5211。）
+
+* "str.format()" 方法现在支持替换字段的自动编号。 这使得使用
+  "str.format()" 更类似于使用 "%s" 格式化:
+
+     >>> '{}:{}:{}'.format(2009, 04, 'Sunday')
+     '2009:4:Sunday'
+     >>> '{}:{}:{day}'.format(2009, 4, day='Sunday')
+     '2009:4:Sunday'
+
+  自动编号从左到右获取字段，因此第一个 "{...}" 指定符将使用
+  "str.format()" 的第一个参数，下一个指定符将使用下一个参数，依此类推
+  。不能混合使用自动编号和显式编号——要么为所有指定符字段编号，要么不编
+  号——但可以混合使用自动编号和命名字段，如上第二个示例所示。（由 Eric
+  Smith 贡献；参见 bpo-5237。）
+
+  复数现在正确支持与 "format()" 的使用，并默认右对齐。指定精度或逗号分
+  隔适用于数字的实部和虚部，但指定的字段宽度和对齐应用于整个 "1.5+3j"
+  输出。（由 Eric Smith 贡献；参见 bpo-1588 和 bpo-7988。）
+
+  “F”格式代码现在总是使用大写字符格式化其输出，因此它现在将产生“INF”和
+  “NAN”。（由 Eric Smith 贡献；参见 bpo-3382。）
+
+  一个底层修改："object.__format__()" 方法现在在传递格式字符串时触发
+  "PendingDeprecationWarning"，因为 "__format__()" 方法对于 "object"
+  将对象转换为字符串表示并进行格式化。以前该方法静默地应用格式字符串到
+  字符串表示，但这可能会隐藏 Python 代码中的错误。如果你提供格式化信息
+  ，如对齐或精度，你可能期望以某种对象特定的方式进行格式化。（由 Eric
+  Smith 修复；参见 bpo-7994。）
+
+* "int()" 和 "long()" 类型获得了一个 "bit_length" 方法，该方法返回表示
+  其参数所需的二进制位数:
+
+     >>> n = 37
+     >>> bin(n)
+     '0b100101'
+     >>> n.bit_length()
+     6
+     >>> n = 2**123-1
+     >>> n.bit_length()
+     123
+     >>> (n+1).bit_length()
+     124
+
+  （由 Fredrik Johansson 和 Victor Stinner 贡献；参见 bpo-3439。）
+
+* 如果相对导入 (例如 "from .os import sep") 失败，"import" 语句将不再
+  尝试绝对导入。 这修复了一个错误，但可能会破坏某些仅凭偶然才工作的
+  "import" 语句。 （由 Meador Inge 修复；参见 bpo-7902。）
+
+* 现在，内置 "unicode" 类型的子类可以重写 "__unicode__()" 方法。（由
+  Victor Stinner 实现；参见 bpo-1583863。）
+
+* "bytearray" 类型的 "translate()" 方法现在接受 "None" 作为其第一个参
+  数。（由 Georg Brandl 修复；参见 bpo-4759。）
+
+* 当使用 "@classmethod" 和 "@staticmethod" 将方法包装为类方法或静态方
+  法时，包装器对象现在会将其包装的函数公开为它们的 "__func__" 属性。
+  （由 Amaury Forgeot d'Arc 贡献，基于 George Sakkis 的建议; bpo-5982
+  。）
+
+* 当使用 "__slots__" 设置一组受限属性时，删除未设置的属性不会像预期那
+  样引发 "AttributeError"。（由 Benjamin Peterson 修复；参见 bpo-7604
+  。）
+
+* 现在支持两种新的编码："cp720"，主要用于阿拉伯文本；以及 "cp858"，是
+  CP 850 的变体，增加了欧元符号。（CP720 由 Alexander Belchenko 和
+  Amaury Forgeot d'Arc 在 bpo-1616979 中贡献；CP858 由 Tim Hatch 在
+  bpo-8016 中贡献。）
+
+* "file" 对象现在在 POSIX 平台上尝试打开目录时会在 "IOError" 异常上设
+  置 "filename" 属性 (由 Jan Kaliszewski 指出；参见 bpo-4764)，并且现
+  在明确检查并禁止对只读文件对象进行写入，而不是依赖 C 库来捕获和报告
+  错误 (由 Stefan Krah 修复；参见 bpo-5677)。
+
+* Python 词法分析器现在会自行处理行尾符，因此内置函数 "compile()" 现在
+  可以接受采用任意行尾约定（如 Windows 的 CRLF、Unix 的 LF 或旧版 Mac
+  的 CR）的代码。此外，该函数不再强制要求代码必须以换行符结尾。
+
+* 在 Python 3.x 中，函数定义中的额外括号是非法的，这意味着你会从 "def
+  f((x)): pass" 中得到一个语法错误。 在 Python3 警告模式下，Python 2.7
+  现在会警告这种奇怪的用法。 （由 James Lingard 指出；参见 bpo-7362。
+  ）
+
+* 现在可以创建对旧式类对象的弱引用。新式类始终可以弱引用。（由 Antoine
+  Pitrou 修复；参见 bpo-8268。）
+
+* 当一个模块对象被垃圾回收时，该模块的字典现在只有在没有其他引用时才会
+  被清除 (参见 bpo-7140)。
+
+
+解释器改动
+----------
+
+一个新的环境变量，"PYTHONWARNINGS"，允许控制警告。它应设置为包含警告设
+置的字符串，等同于使用 "-W" 开关的设置，用逗号分隔。（由 Brian Curtin
+贡献；参见 bpo-7301。）
+
+例如，以下设置将在每次出现警告时打印它们，但将来自 "Cookie" 模块的警告
+转换为错误。（设置环境变量的确切语法因操作系统和shell而异。）
+
+   export PYTHONWARNINGS=all,error:::Cookie:0
+
+
+性能优化
+--------
+
+已添加多项性能优化改进：
+
+* 添加了一个新的操作码，用于执行 "with" 语句的初始设置，查找
+  "__enter__()" 和 "__exit__()" 方法。（由 Benjamin Peterson 贡献。）
+
+* 垃圾回收器现在对一种常见使用模式表现更好：当大量对象被分配而没有释放
+  任何对象时。此前，垃圾回收需要二次方时间，但现在随着堆中对象数量的增
+  长，完整垃圾回收的次数减少了。新逻辑仅在中间代被收集10次且中间代幸存
+  对象数量超过最老代对象数量的10%时，才执行一次完整的垃圾回收。 （由
+  Martin von Löwis 建议，Antoine Pitrou 实现；参见 bpo-4074。）
+
+* 垃圾回收器会尽量避免追踪那些不可能形成循环引用的简单容器对象。在
+  Python 2.7 中，对于仅包含原子类型（如整数、字符串等）的元组和字典，
+  现在均符合这一特性。由此推及，包含原子类型元组的字典同样不会被追踪。
+  这一优化通过减少垃圾回收器需要处理和遍历的对象数量，有效降低了每次垃
+  圾回收的开销。（由 Antoine Pitrou 贡献；参见 bpo-4688。）
+
+* 长整型数值现在在内部存储时采用 "2**15" 或 "2**30" 作为基数，具体采用
+  哪种基数在构建（编译）时确定。此前，长整型数值始终采用 "2**15" 作为
+  存储基数。使用 "2**30" 作为基数能在 64 位机器上带来显著的性能提升，
+  但在 32 位机器上的基准测试结果则好坏参半。因此，默认情况下，在 64 位
+  机器上使用 "2**30" 作为基数，在 32 位机器上使用 "2**15" 作为基数；在
+  Unix 系统上，新增了一个配置选项 *--enable-big-digits* (对应选项标记
+  为 "--enable-big-digits")，可用于覆盖这一默认设置。
+
+  除了性能改进外，这一变化对最终用户应该是不可见的，有一个例外：为了测
+  试和调试目的，新增了一个structseq "sys.long_info"，它提供了有关内部
+  格式的信息，包括每个数字的位数和用于存储每个数字的C类型的大小（以字
+  节为单位）:
+
+     >>> import sys
+     >>> sys.long_info
+     sys.long_info(bits_per_digit=30, sizeof_digit=4)
+
+  （由 Mark Dickinson在 bpo-4258 贡献）
+
+  另一组更改使长对象缩小了几字节：在32位系统上缩小了2字节，在64位系统
+  上缩小了6字节。（由Mark Dickinson贡献；参见 bpo-5260。）
+
+* 通过收紧内循环、进行位移而不是乘法以及修复不必要的额外迭代，长整数的
+  除法算法已经变得更快。各种基准测试显示，长整数除法和取模操作的加速在
+  50%到150%之间。（由 Mark Dickinson 贡献；参见 bpo-5512。）位运算也显
+  著更快 (初始补丁由 Gregory Smith 提供；参见 bpo-1087418)。
+
+* "%" 的实现检查左侧操作数是否为 Python 字符串并进行特殊处理；这使频繁
+  使用 "%" 与字符串的应用程序（如模板库）的性能提高了 1% 到 3%。（由
+  Collin Winter 实现；参见 bpo-5176。）
+
+* 带有 "if" 条件的列表推导被编译成更快的字节码。 （由 Antoine Pitrou
+  提供补丁，Jeffrey Yasskin 向下移植到 2.7；参见 bpo-4715。）
+
+* 通过特殊处理基数10而不是使用支持任意基数的通用转换函数，将整数或长整
+  数转换为十进制字符串的速度得到了提升。（由Gawain Bolton提供补丁；参
+  见 bpo-6713。）
+
+* 字符串型类型（字符串、Unicode字符串和 "bytearray" 对象）的 "split()"
+  、"replace()"、"rindex()"、"rpartition()" 和 "rsplit()" 方法现在使用
+  快速的逆向搜索算法，而不是逐字符扫描。这在某些情况下可以快10倍。（由
+  Florent Xicluna 添加；参见 bpo-7462 和 bpo-7622。）
+
+* "pickle" 和 "cPickle" 模块现在自动内联用于属性名称的字符串，减少了反
+  序列化生成的对象的内存使用。（由 Jake McGuire 贡献；参见 bpo-5084。
+  ）
+
+* "cPickle" 模块现在对字典进行了特殊处理，将序列化它们所需的时间几乎减
+  半。（由 Collin Winter 贡献；参见 bpo-5670。）
+
+
+新增和改进的模块
+================
+
+与每个版本一样，Python 的标准库收到了许多增强和 bug 修复。以下是一些最
+显著变化的部分列表，按模块名称字母顺序排序。查阅源树中的 "Misc/NEWS"
+文件以获取更完整的变化列表，或通过 Subversion 日志查看所有详细信息。
+
+* "bdb" 模块的基调试类 "Bdb" 增加了一个跳过模块的功能。 构造函数现在接
+  受一个包含 glob 风格模式 (如 "django.*") 的可迭代对象；调试器将不会
+  进入与这些模式之一匹配的模块的堆栈帧。 （由 Maru Newby 在 Senthil
+  Kumaran 的建议后贡献；参见 bpo-5142。）
+
+* "binascii" 模块现在支持缓冲区 API，因此可以与 "memoryview" 实例和其
+  他类似的缓冲区对象一起使用。（由 Florent Xicluna 从 3.x 向下移植；参
+  见 bpo-7703。）
+
+* 更新模块："bsddb" 模块已从 4.7.2devel9 更新到 pybsddb 包 的 4.8.4 版
+  本。新版本具有更好的 Python 3.x 兼容性，各种 bug 修复，并添加了几个
+  新的 BerkeleyDB 标志和方法。（由 Jesú Cea Avión 更新；参见 bpo-8156
+  。pybsddb 的更改日志可以在
+  https://hg.jcea.es/pybsddb/file/tip/ChangeLog 查看。）
+
+* "bz2" 模块的 "BZ2File" 现在支持上下文管理协议，因此你可以编写 "with
+  bz2.BZ2File(...) as f:"。（由 Hagen Fürstenau 贡献；参见 bpo-3860。
+  ）
+
+* 新增类："collections" 模块中的 "Counter" 类适用于统计数据。"Counter"
+  实例的行为大多类似于字典，但对于缺失的键返回零而不是引发 "KeyError"
+  ：
+
+     >>> from collections import Counter
+     >>> c = Counter()
+     >>> for letter in 'here is a sample of english text':
+     ...   c[letter] += 1
+     ...
+     >>> c
+     Counter({' ': 6, 'e': 5, 's': 3, 'a': 2, 'i': 2, 'h': 2,
+     'l': 2, 't': 2, 'g': 1, 'f': 1, 'm': 1, 'o': 1, 'n': 1,
+     'p': 1, 'r': 1, 'x': 1})
+     >>> c['e']
+     5
+     >>> c['z']
+     0
+
+  有三个额外的 "Counter" 方法。"most_common()" 返回最常见的 N 个元素及
+  其计数。"elements()" 返回一个迭代器，遍历包含的元素，每个元素重复的
+  次数与其计数相同。"subtract()" 接受一个可迭代对象，并为每个元素减一
+  而不是加一；如果参数是字典或另一个 "Counter"，则减去相应的计数。:
+
+     >>> c.most_common(5)
+     [(' ', 6), ('e', 5), ('s', 3), ('a', 2), ('i', 2)]
+     >>> c.elements() ->
+        'a', 'a', ' ', ' ', ' ', ' ', ' ', ' ',
+        'e', 'e', 'e', 'e', 'e', 'g', 'f', 'i', 'i',
+        'h', 'h', 'm', 'l', 'l', 'o', 'n', 'p', 's',
+        's', 's', 'r', 't', 't', 'x'
+     >>> c['e']
+     5
+     >>> c.subtract('very heavy on the letter e')
+     >>> c['e']    # Count 现在降低了
+     -1
+
+  由 Raymond Hettinger 贡献；参见 bpo-1696199。
+
+  新增类："OrderedDict" 在之前的章节 PEP 372：将有序字典添加到
+  collections 中有描述。
+
+  新方法："deque" 数据类型现在有一个 "count()" 方法，返回等于提供的参
+  数 *x* 的元素数量，以及一个 "reverse()" 方法，原地反转 deque 中的元
+  素。"deque" 还将其最大长度暴露为只读的 "maxlen" 属性。（这两个特性均
+  由 Raymond Hettinger 添加。)
+
+  "namedtuple" 类现在有一个可选的 *rename* 参数。如果 *rename* 为真，
+  则由于重复或不是合法的 Python 标识符而无效的字段名将被重命名为基于字
+  段在字段列表中的位置的合法名称：
+
+  >>> from collections import namedtuple
+  >>> T = namedtuple('T', ['field1', '$illegal', 'for', 'field2'], rename=True)
+  >>> T._fields
+  ('field1', '_1', '_2', 'field2')
+
+  （由 Raymond Hettinger 添加；参见 bpo-1818。）
+
+  最后，"Mapping" 抽象基类在将一个映射对象与非 "Mapping" 类型的其他类
+  型进行比较时，现在会返回 "NotImplemented"。（该问题由 Daniel
+  Stutzbach 修复；参见 bpo-8729。）
+
+* "ConfigParser" 模块中的解析类构造函数现在接受一个 *allow_no_value*
+  参数，默认为假；如果为真，将允许没有值的选项。例如:
+
+     >>> import ConfigParser, StringIO
+     >>> sample_config = """
+     ... [mysqld]
+     ... user = mysql
+     ... pid-file = /var/run/mysqld/mysqld.pid
+     ... skip-bdb
+     ... """
+     >>> config = ConfigParser.RawConfigParser(allow_no_value=True)
+     >>> config.readfp(StringIO.StringIO(sample_config))
+     >>> config.get('mysqld', 'user')
+     'mysql'
+     >>> print config.get('mysqld', 'skip-bdb')
+     None
+     >>> print config.get('mysqld', 'unknown')
+     Traceback (most recent call last):
+       ...
+     NoOptionError: No option 'unknown' in section: 'mysqld'
+
+  （由 Mats Kindahl 贡献；参见 bpo-7005。）
+
+* 已弃用的函数："contextlib.nested()"，它允许使用单个 "with" 语句处理
+  多个上下文管理器，已被弃用，因为 "with" 语句现在支持多个上下文管理器
+  。
+
+* "cookielib" 模块现在忽略具有无效版本字段的 cookie，即不包含整数值的
+  版本字段。（由 John J. Lee 修复；参见 bpo-3924。）
+
+* "copy" 模块的 "deepcopy()" 函数现在将正确复制绑定的实例方法。（由
+  Robert Collins 实现；参见 bpo-1515。）
+
+* "ctypes" 模块现在总是将 "None" 转换为 C 的 "NULL" 指针，用于声明为指
+  针的参数。（由 Thomas Heller 改动；参见 bpo-4606。）底层的 libffi 库
+  已更新至版本 3.0.9，包含对不同平台的多项修复。（由 Matthias Klose 更
+  新；参见 bpo-8142。）
+
+* 新方法："datetime" 模块的 "timedelta" 类增加了一个 "total_seconds()"
+  方法，返回持续时间中的秒数。（由 Brian Quinlan 贡献；参见 bpo-5788。
+  ）
+
+* 新方法："Decimal" 类增加了一个 "from_float()" 类方法，用于将浮点数精
+  确转换为 "Decimal"。这种精确转换力求最接近浮点表示值的十进制近似值；
+  因此，结果十进制值仍会包含任何不准确的部分。例如，
+  "Decimal.from_float(0.1)" 返回 "Decimal('0.100000000000000005551115
+  1231257827021181583404541015625')"。（由 Raymond Hettinger 实现；参
+  见 bpo-4796。）
+
+  现在，将 "Decimal" 实例与浮点数进行比较，会根据操作数的数值产生合理
+  的结果。以前，此类比较会回退到 Python 的默认对象比较规则，这会根据它
+  们的类型产生任意结果。请注意，你仍然不能在其他操作（如加法）中组合
+  "Decimal" 和浮点数，因为你应该明确选择如何在浮点数和 "Decimal" 之间
+  进行转换。（由 Mark Dickinson 修复；参见 bpo-2531。）
+
+  "Decimal" 的构造函数现在接受浮点数 (由 Raymond Hettinger 添加；参见
+  bpo-8257) 和非欧洲 Unicode 字符，如阿拉伯-印度数字 (由 Mark
+  Dickinson 贡献；参见 bpo-6595)。
+
+  "Context" 类的大多数方法现在既接受整数也接受 "Decimal" 实例；唯一的
+  例外是 "canonical()" 和 "is_canonical()" 方法。 (由 Juan José Conti
+  提交补丁；参见 bpo-7633)
+
+  当使用 "Decimal" 实例与字符串的 "format()" 方法时，之前的默认对齐方
+  式是左对齐。这已被更改为右对齐，这对于数值类型更为合理。 (由 Mark
+  Dickinson 更改；参见 bpo-6857)
+
+  涉及信号 NaN 值 (或 "sNAN") 的比较现在会触发 "InvalidOperation"，而
+  不是根据比较运算符静默地返回真或假值。 静默 NaN 值 (或 "NaN") 现在可
+  以被哈希。 (由 Mark Dickinson 修复；参见 bpo-7279)
+
+* "difflib" 模块现在通过一个小改动，使其输出与现代 **diff**/**patch**
+  工具更加兼容，即在头部给出文件名时使用制表符而不是空格作为分隔符。 (
+  由 Anatoly Techtonik 修复；参见 bpo-7585)
+
+* Distutils 的 "sdist" 命令现在总是重新生成 "MANIFEST" 文件，因为即使
+  "MANIFEST.in" 或 "setup.py" 文件没有被修改，用户也可能创建了一些应该
+  包含的新文件。 (由 Tarek Ziadé 修复；参见 bpo-8688)
+
+* "doctest" 模块的 "IGNORE_EXCEPTION_DETAIL" 标志现在将忽略包含被测试
+  异常的模块名称。 (由 Lennart Regebro 提交补丁；参见 bpo-7490)
+
+* "email" 模块的 "Message" 类现在将接受一个 Unicode 值的有效负载，并自
+  动将有效负载转换为 "output_charset" 指定的编码。 (由 R. David Murray
+  添加；参见 bpo-1368247)
+
+* "Fraction" 类现在接受单个浮点数或 "Decimal" 实例，或两个有理数作为其
+  构造函数的参数。（由 Mark Dickinson 实现；有理数在 bpo-5812 中添加，
+  浮点数/小数在 bpo-8294 中添加。）
+
+  分数和复数之间的排序比较 ("<", "<=", ">", ">=") 现在会引发
+  "TypeError"。 这一改进修复了一处疏漏，使得 "Fraction" 类型的行为与其
+  他数值类型保持一致。
+
+* 新增类："ftplib" 模块中的 "FTP_TLS" 类提供使用 TLS 封装的认证以及后
+  续控制和数据传输的安全 FTP 连接。（由 Giampaolo Rodola 贡献；参见
+  bpo-2054。）
+
+  "storbinary()" 方法用于二进制上传，现在可以通过新增的 *rest* 参数重
+  新启动上传（由 Pablo Mouzo 提交补丁；参见 bpo-6845。）
+
+* 新的类装饰器："functools" 模块中的 "@~functools.total_ordering" 接受
+  一个定义了 "__eq__()" 方法和 "__lt__()"、"__le__()"、"__gt__()" 或
+  "__ge__()" 之一的类，并自动生成缺失的比较方法。由于 "__cmp__()" 方法
+  在 Python 3.x 中已被弃用，这个装饰器使得定义有序类变得更加容易。（由
+  Raymond Hettinger 添加；bpo-5479。）
+
+  新增函数："cmp_to_key()" 将接受一个期望两个参数的旧式比较函数，并返
+  回一个新的可调用对象，该对象可以用作 "sorted()"、 "min()" 和 "max()"
+  等函数的 *key* 参数。其主要用途是帮助代码兼容 Python 3.x。（由
+  Raymond Hettinger 添加。）
+
+* 新增函数："gc" 模块的 "is_tracked()" 在给定实例被垃圾回收器跟踪时返
+  回 true，否则返回 false。（由 Antoine Pitrou 贡献；参见 bpo-4688。）
+
+* "gzip" 模块的 "GzipFile" 现在支持上下文管理协议，因此你可以写 "with
+  gzip.GzipFile(...) as f:" (由 Hagen Fürstenau 贡献;参见 bpo-3860)，
+  并且它现在实现了 "io.BufferedIOBase" ABC，因此你可以用
+  "io.BufferedReader" 包装它以加快处理速度 (由 Nir Aides 贡献; 参见
+  bpo-7471)。 现在还可以通过在构造函数中提供可选的时间戳来覆盖 gzip 文
+  件中记录的修改时间。（由 Jacques Frechet 贡献; 参见 bpo-4272。）
+
+  gzip 格式的文件可以用尾随零字节填充；"gzip" 模块现在将消耗这些尾随字
+  节。（由 Tadek Pietraszek 和 Brian Curtin 修复;参见 bpo-2846。）
+
+* 新属性："hashlib" 模块现在有一个 "algorithms" 属性，包含一个命名支持
+  算法的元组。在 Python 2.7 中，"hashlib.algorithms" 包含 "('md5',
+  'sha1', 'sha224', 'sha256', 'sha384', 'sha512')"。（由 Carl Chenet
+  贡献;参见 bpo-7418。）
+
+* "httplib" 模块使用的默认 "HTTPResponse" 类现在支持缓冲，从而大大加快
+  了 HTTP 响应的读取速度。（由 Kristján Valur Jónsson 贡献;参见
+  bpo-4879。）
+
+  "HTTPConnection" 和 "HTTPSConnection" 类现在支持一个
+  *source_address* 参数，这是一个 "(host, port)" 2元组，给出了将用于连
+  接的源地址。（由 Eldon Ziegler 贡献;参见 bpo-3972。）
+
+* "ihooks" 模块现在支持相对导入。请注意，"ihooks" 是一个用于自定义导入
+  的较旧模块，已被 Python 2.0 中添加的 "imputil" 模块取代。（相对导入
+  支持由 Neil Schemenauer 添加。）
+
+* "imaplib" 模块现在支持 IPv6 地址。（由 Derek Morr 贡献;参见 bpo-1655
+  。）
+
+* 新功能："inspect" 模块的 "getcallargs()" 函数接受一个可调用对象及其
+  位置和关键字参数，并确定该可调用对象的哪些参数将接收每个参数，返回一
+  个将参数名映射到其值的字典。例如:
+
+     >>> from inspect import getcallargs
+     >>> def f(a, b=1, *pos, **named):
+     ...     pass
+     ...
+     >>> getcallargs(f, 1, 2, 3)
+     {'a': 1, 'b': 2, 'pos': (3,), 'named': {}}
+     >>> getcallargs(f, a=2, x=4)
+     {'a': 2, 'b': 1, 'pos': (), 'named': {'x': 4}}
+     >>> getcallargs(f)
+     Traceback (most recent call last):
+     ...
+     TypeError: f() takes at least 1 argument (0 given)
+
+  由 Georg Sakkis 在 bpo-3135 中贡献。
+
+* 更新模块："io" 库已升级到随 Python 3.1 一起发布的版本。对于 3.1，I/O
+  库完全用 C 语言重写，根据执行的任务不同，速度提高了 2 到 20 倍。原始
+  的 Python 版本被重命名为 "_pyio" 模块。
+
+  一个小的变化："io.TextIOBase" 类现在有一个 "errors" 属性，用于给出编
+  码和解码错误使用的错误设置 ("'strict'"、"'replace'"、"'ignore'" 之一
+  )。
+
+  "io.FileIO" 类在传递无效文件描述符时现在会引发 "OSError"。(由
+  Benjamin Peterson 实现；参见 bpo-4991。) "truncate()" 方法现在保留文
+  件位置；之前它会将文件位置更改为新文件的末尾。(由 Pascal Chambon 修
+  复；参见 bpo-6939。)
+
+* 新增函数："itertools.compress(data, selectors)" 接受两个迭代器。如果
+  *selectors* 中对应的值为真，则返回 *data* 中的元素:
+
+     itertools.compress('ABCDEF', [1,0,1,0,1,1]) =>
+       A, C, E, F
+
+  新增函数："itertools.combinations_with_replacement(iter, r)" 返回可
+  迭代对象 *iter* 中所有可能的 *r* 长度组合。与 "combinations()" 不同
+  ，生成组合中的单个元素可以重复:
+
+     itertools.combinations_with_replacement('abc', 2) =>
+       ('a', 'a'), ('a', 'b'), ('a', 'c'),
+       ('b', 'b'), ('b', 'c'), ('c', 'c')
+
+  请注意，元素被视为唯一是根据它们在输入中的位置，而不是它们的实际值。
+
+  "itertools.count()" 函数现在有一个 *step* 参数，允许以非1的值递增。
+  "count()" 也现在允许关键字参数，并使用非整数值，例如浮点数或
+  "Decimal" 实例。（由 Raymond Hettinger 实现；参见 bpo-5032。）
+
+  "itertools.combinations()" 和 "itertools.product()" 函数此前在参数
+  *r* 的值大于输入可迭代对象长度时会引发 "ValueError" 异常。经认定这是
+  规范定义上的错误，因此现在当出现这种情况时，这两个函数会返回一个空迭
+  代器。（由 Raymond Hettinger 修复；参见 bpo-4816。）
+
+* 更新模块："json" 模块已升级到 simplejson 包的 2.0.9 版本，该版本包括
+  一个 C 扩展，使编码和解码更快。（由 Bob Ippolito 贡献；参见 bpo-4136
+  。）
+
+  为了支持新的 "collections.OrderedDict" 类型，"json.load()" 现在有一
+  个可选的 *object_pairs_hook* 参数，它将用任何解码为对列表的对象字面
+  量调用。（由 Raymond Hettinger 贡献；参见 bpo-5381。）
+
+* "mailbox" 模块的 "Maildir" 类现在记录它读取的目录的时间戳，并且只有
+  在修改时间随后发生变化时才重新读取它们。这通过避免不必要的目录扫描来
+  提高性能。（由 A.M. Kuchling 和 Antoine Pitrou 修复；参见
+  bpo-1607951、 bpo-6896。）
+
+* 新增函数："math" 模块新增了 "erf()" 和 "erfc()" 用于计算误差函数和互
+  补误差函数，"expm1()" 用于更精确地计算 "e**x - 1" 而不是使用 "exp()"
+  并减去 1，"gamma()" 用于计算伽马函数，以及 "lgamma()" 用于计算伽马函
+  数的自然对数。（由 Mark Dickinson 和 nirinA raseliarison 贡献；参见
+  bpo-3366。）
+
+* "multiprocessing" 模块的 "Manager*" 类现在可以传递一个可调用对象，该
+  对象将在子进程启动时被调用，同时还可以传递一组将传递给该可调用对象的
+  参数。（由 lekma 贡献；参见 bpo-5585。）
+
+  控制工作进程池的 "Pool" 类现在有一个可选的 *maxtasksperchild* 参数。
+  工作进程将执行指定数量的任务后退出，导致 "Pool" 启动新的工作进程。这
+  在任务可能泄漏内存或其他资源，或者某些任务会使工作进程变得非常大时非
+  常有用。（由 Charles Cazabon 贡献；参见 bpo-6963。）
+
+* "nntplib" 模块现在支持 IPv6 地址。（由 Derek Morr 贡献；参见
+  bpo-1664。）
+
+* 新增函数："os" 模块封装了以下 POSIX 系统调用："getresgid()" 和
+  "getresuid()"，它们返回实际、有效和保存的 GID 和 UID；"setresgid()"
+  和 "setresuid()"，它们将实际、有效和保存的 GID 和 UID 设置为新值；
+  "initgroups()"，用于初始化当前进程的组访问列表。（GID/UID 函数由
+  Travis H. 贡献；参见 bpo-6508。initgroups 支持由 Jean-Paul Calderone
+  添加；参见 bpo-7333。）
+
+  "os.fork()" 函数现在在子进程中重新初始化导入锁；这解决了在 Solaris
+  上从线程中调用 "fork()" 时的问题。（由 Zsolt Cserna 修复；参见
+  bpo-7242。）
+
+* 在 "os.path" 模块中，"normpath()" 和 "abspath()" 函数现在可以保留
+  Unicode；如果它们的输入路径是 Unicode 字符串，返回值也是 Unicode 字
+  符串。("normpath()" 由 Matt Giuca 在 bpo-5827 中修复；"abspath()" 由
+  Ezio Melotti 在 bpo-3426 修复。)
+
+* "pydoc" 模块现在提供了 Python 使用的各种符号的帮助信息。 例如，你现
+  在可以执行 "help('<<')" 或 "help('@')"。（由 David Laban 贡献；参见
+  bpo-4739。）
+
+* "re" 模块的 "split()"、"sub()" 和 "subn()" 现在接受一个可选的
+  *flags* 参数，以便与其他模块中的函数保持一致。（由 Gregory P. Smith
+  添加）
+
+* 新增函数："runpy" 模块中的 "run_path()" 将执行提供的 *path* 参数中的
+  代码。 *path* 可以是 Python 源文件路径 ("example.py")、编译的字节码
+  文件路径 ("example.pyc")、目录 ("./package/") 或 zip 归档文件路径
+  ("example.zip")。 如果提供的是目录或 zip 路径，它将被添加到
+  "sys.path" 的前面，并导入模块 "__main__"。 预期目录或 zip 包含一个
+  "__main__.py"；如果没有，可能会从 "sys.path" 中后面的位置导入其他
+  "__main__.py"。 这使得脚本能够利用 "runpy" 模块的更多机制，从而模拟
+  Python 命令行处理显式路径名称的方式。（由 Nick Coghlan 添加；参见
+  bpo-6816。）
+
+* 新增函数：在 "shutil" 模块中，"make_archive()" 接受一个文件名、归档
+  类型（zip 或 tar 格式）和目录路径，并创建一个包含目录内容的归档文件
+  。（由 Tarek Ziadé 添加）
+
+  "shutil" 模块的 "copyfile()" 和 "copytree()" 函数现在在尝试复制命名
+  管道时将引发 "SpecialFileError" 异常。此前代码会将命名管道视为普通文
+  件并尝试打开它们进行读取，这会导致无限阻塞。（由 Antoine Pitrou 修复
+  ；参见 bpo-3002。）
+
+* "signal" 模块现在不再重新安装信号处理程序，除非确实必要，这修复了一
+  个可能导致无法稳健捕获 EINTR 信号的错误。（由 Charles-Francois
+  Natali 修复；参见 bpo-8354。）
+
+* 新增函数：在 "site" 模块中，新增了三个函数返回各种站点和用户特定的路
+  径。"getsitepackages()" 返回包含所有全局 site-packages 目录的列表，
+  "getusersitepackages()" 返回用户 site-packages 目录的路径，
+  "getuserbase()" 返回 "USER_BASE" 环境变量的值，给出可用于存储数据的
+  目录路径。（由 Tarek Ziadé 贡献；参见 bpo-6693。）
+
+  "site" 模块现在会报告在导入 "sitecustomize" 模块时发生的异常，并且不
+  再捕获并吞掉 "KeyboardInterrupt" 异常。（由 Victor Stinner 修复；参
+  见 bpo-3137。）
+
+* "create_connection()" 函数新增了一个 *source_address* 参数，这是一个
+  "(host, port)" 2元组，指定用于连接的源地址。（由 Eldon Ziegler 贡献
+  ；参见 bpo-3972。）
+
+  "recv_into()" 和 "recvfrom_into()" 方法现在支持将接收的数据写入实现
+  了缓冲区 API 的对象，最常用的是 "bytearray" 和 "memoryview" 对象。（
+  由 Antoine Pitrou 实现；参见 bpo-8104。）
+
+* "SocketServer" 模块的 "TCPServer" 类现在支持套接字超时和禁用 Nagle
+  算法。"disable_nagle_algorithm" 类属性默认为 "False"；如果覆盖为
+  true，新的请求连接将设置 TCP_NODELAY 选项，以防止将多个小发送包缓冲
+  到单个 TCP 数据包中。"timeout" 类属性可以包含一个以秒为单位的超时时
+  间，该时间将应用于请求套接字；如果在规定时间内未收到请求，将调用
+  "handle_timeout()"，并且 "handle_request()" 将返回。（由 Kristján
+  Valur Jónsson 贡献；参见 bpo-6192 和 bpo-6267。）
+
+* 更新模块："sqlite3" 模块已更新到 pysqlite 包 的 2.6.0 版本。2.6.0 版
+  本包括多项 bug 修复，并增加了从共享库加载 SQLite 扩展的能力。调用
+  "enable_load_extension(True)" 方法以启用扩展，然后调用
+  "load_extension()" 以加载特定的共享库。（由 Gerhard Häring 更新。）
+
+* "ssl" 模块的 "SSLSocket" 对象现在支持缓冲区 API，这修复了测试套件失
+  败的问题 (由 Antoine Pitrou 修复；参见 bpo-7133)，并自动设置 OpenSSL
+  的 "SSL_MODE_AUTO_RETRY"，这将防止从触发 SSL 重新协商的 "recv()" 操
+  作返回错误代码 (由 Antoine Pitrou 修复；参见 bpo-8222)。
+
+  "wrap_socket()" 构造函数现在接受一个 *ciphers* 参数，该参数是一个列
+  出允许的加密算法的字符串；字符串的格式在 OpenSSL 文档 中描述。（由
+  Antoine Pitrou 添加；参见 bpo-8322。）
+
+  另一项更改使扩展加载了所有OpenSSL的加密算法和摘要算法，以便它们全部
+  可用。一些SSL证书无法验证，会报告“未知算法”错误。（由Beda Kosata报告
+  ，Antoine Pitrou修复；参见 bpo-8484。）
+
+  当前使用的OpenSSL版本现在可以作为模块属性 "ssl.OPENSSL_VERSION" (一
+  个字符串) 、"ssl.OPENSSL_VERSION_INFO" (一个5元组) 和
+  "ssl.OPENSSL_VERSION_NUMBER" (一个整数) 使用。（由Antoine Pitrou添加
+  ；参见 bpo-8321。）
+
+* "struct" 模块将不再在值对于特定整数格式代码 ("bBhHiIlLqQ" 之一) 过大
+  时静默忽略溢出错误；它现在总是引发 "struct.error" 异常。 (由 Mark
+  Dickinson 更改；参见 bpo-1523。) "pack()" 函数也将尝试使用
+  "__index__()" 来转换并打包非整数，然后再尝试 "__int__()" 方法或报告
+  错误。 （由 Mark Dickinson 更改；参见 bpo-8300。）
+
+* 新增函数："subprocess" 模块的 "check_output()" 运行一个带有指定参数
+  集的命令，并在命令无错误运行时返回命令的输出作为字符串，否则引发
+  "CalledProcessError" 异常。
+
+     >>> subprocess.check_output(['df', '-h', '.'])
+     'Filesystem     Size   Used  Avail Capacity  Mounted on\n
+     /dev/disk0s2    52G    49G   3.0G    94%    /\n'
+
+     >>> subprocess.check_output(['df', '-h', '/bogus'])
+       ...
+     subprocess.CalledProcessError: Command '['df', '-h', '/bogus']' returned non-zero exit status 1
+
+  （由 Gregory P. Smith 贡献）
+
+  "subprocess" 模块现在在接收到 "EINTR" 信号时会重试其内部系统调用。（
+  由多人报告；最终补丁由 Gregory P. Smith 在 bpo-1068268 中提供。）
+
+* 新增函数：在 "symtable" 模块中的 "is_declared_global()" 函数，对于明
+  确声明为全局变量的变量返回 true，对于隐式全局变量返回 false。（由
+  Jeremy Hylton 贡献。）
+
+* "syslog" 模块现在将使用 "sys.argv[0]" 的值作为标识符，而不是之前的默
+  认值 "'python'"。（由 Sean Reifschneider 更改；参见 bpo-8451。）
+
+* "sys.version_info" 的值现在是一个具名元组，其属性名为 "major"、
+  "minor"、"micro"、"releaselevel" 和 "serial"。（由 Ross Light 贡献；
+  参见 bpo-4285。）
+
+  "sys.getwindowsversion()" 也返回一个具名元组，其属性名为 "major"、
+  "minor"、"build"、"platform"、"service_pack"、"service_pack_major"、
+  "service_pack_minor"、"suite_mask" 和 "product_type"。（由 Brian
+  Curtin 贡献；参见 bpo-7766。）
+
+* "tarfile" 模块的默认错误处理已更改，不再抑制致命错误。之前的默认错误
+  级别为 0，这意味着错误只会导致一条消息被写入调试日志，但由于调试日志
+  默认不激活，这些错误会被忽略。现在的默认错误级别为 1，如果出现错误会
+  引发异常。（由 Lars Gustäbel 改变；参见 bpo-7357。）
+
+  "tarfile" 现在支持过滤添加到 tar 文件中的 "TarInfo" 对象。当你调用
+  "add()" 时，可以提供一个可选的 *filter* 参数，该参数是一个可调用的函
+  数。*filter* 可调用函数将为每个被添加的文件传递 "TarInfo"，并可以修
+  改并返回它。如果可调用函数返回 "None"，该文件将被排除在最终归档之外
+  。这比现有的 *exclude* 参数更强大，因此 *exclude* 参数已被弃用。(由
+  Lars Gustäbel 添加；参见 bpo-6856。) "TarFile" 类现在也支持上下文管
+  理协议。（由 Lars Gustäbel 添加；参见 bpo-7232。）
+
+* "threading.Event" 类的 "wait()" 方法现在在退出时返回内部标志。这意味
+  着该方法通常会返回 true，因为 "wait()" 应该阻塞直到内部标志变为 true
+  。只有在提供了超时并且操作超时时，返回值才会是 false。（由 Tim
+  Lesher 贡献；参见 bpo-1674032。）
+
+* "unicodedata" 模块提供的 Unicode 数据库现在用于内部确定哪些字符是数
+  字、空格或表示换行。该数据库还包括来自 "Unihan.txt" 数据文件的信息 (
+  由 Anders Chrigström 和 Amaury Forgeot d'Arc 提交的补丁；参见
+  bpo-1571184)，并已更新到版本 5.2.0 (由 Florent Xicluna 更新；参见
+  bpo-8024)。
+
+* "urlparse" 模块的 "urlsplit()" 现在以一种符合 **RFC 3986** 的方式处
+  理未知的 URL 方案：如果 URL 形如 ""<something>://...""，则 "://" 之
+  前的文本被视为方案，即使它是一个模块不知道的自定义方案。这一更改可能
+  会破坏针对旧行为进行工作的代码。例如，Python 2.6.4 或 2.5 将返回以下
+  内容：
+
+     >>> import urlparse
+     >>> urlparse.urlsplit('invented://host/filename?query')
+     ('invented', '', '//host/filename?query', '', '')
+
+  Python 2.7（以及Python 2.6.5）将返回：
+
+     >>> import urlparse
+     >>> urlparse.urlsplit('invented://host/filename?query')
+     ('invented', 'host', '/filename?query', '', '')
+
+  （Python 2.7实际上产生的输出略有不同，因为它返回的是一个具名元组而不
+  是标准元组。）
+
+  "urlparse" 模块还支持由 **RFC 2732** 定义的IPv6文字地址 (由Senthil
+  Kumaran贡献；参见 bpo-2987)。
+
+     >>> urlparse.urlparse('http://[1080::8:800:200C:417A]/foo')
+     ParseResult(scheme='http', netloc='[1080::8:800:200C:417A]',
+                 path='/foo', params='', query='', fragment='')
+
+* 新增类："weakref" 模块中的 "WeakSet" 类是一个集合，它只对其元素保持
+  弱引用；一旦没有引用指向这些元素，它们将被移除。（最初由 Raymond
+  Hettinger 在 Python 3.x 中实现，并由 Michael Foord 向下移植到2.7。）
+
+* "xml.etree.ElementTree" 库在输出XML处理指令 (看起来像 "<?xml-
+  stylesheet href="#style1"?>") 或注释 (看起来像 "<!-- comment -->")
+  时，不再转义与符号“&”和尖括号“<>”。 （由 Neil Muller 编写补丁；参见
+  bpo-2746。）
+
+* 由 "xmlrpclib" 和 "SimpleXMLRPCServer" 模块提供的XML-RPC客户端和服务
+  器，通过支持HTTP/1.1保持连接和可选使用gzip编码压缩交换的XML，提高了
+  性能。gzip压缩由 "SimpleXMLRPCRequestHandler" 的 "encode_threshold"
+  属性控制，该属性包含一个字节大小；大于此大小的响应将被压缩。（由
+  Kristján Valur Jónsson贡献；参见 bpo-6267。）
+
+* "zipfile" 模块的 "ZipFile" 现在支持上下文管理协议，因此你可以写
+  "with zipfile.ZipFile(...) as f:"。（由 Brian Curtin 贡献；参见
+  bpo-5511。）
+
+  "zipfile" 现在也支持归档空目录并正确提取它们。（由 Kuba Wieczorek 修
+  复；参见 bpo-4710。）从归档中读取文件更快，交替使用 "read()" 和
+  "readline()" 现在也能正确工作。（由 Nir Aides 贡献；参见 bpo-7610。
+  ）
+
+  "is_zipfile()" 函数现在接受文件对象，除了早期版本中接受的路径名。（
+  由 Gabriel Genellina 贡献；参见 bpo-4756。）
+
+  "writestr()" 方法现在有一个可选的 *compress_type* 参数，允许你覆盖在
+  "ZipFile" 构造函数中指定的默认压缩方法。（由 Ronald Oussoren 贡献；
+  参见 bpo-6003。）
+
+
+新增模块：importlib
+-------------------
+
+Python 3.1 包含 "importlib" 包，这是对 Python 的 "import" 语句背后逻辑
+的重新实现。"importlib" 对 Python 解释器的实现者和希望编写新导入器以参
+与导入过程的用户很有用。Python 2.7 不包含完整的 "importlib" 包，而是有
+一个小型的子集，其中包含一个单一函数，"import_module()"。
+
+"import_module(name, package=None)" 导入一个模块。*name* 是一个包含模
+块或包名称的字符串。可以通过提供一个以 "." 字符开头的字符串来进行相对
+导入，例如 "..utils.errors"。对于相对导入，必须提供 *package* 参数，它
+是将用作相对导入锚点的包名称。"import_module()" 既将导入的模块插入到
+"sys.modules" 中，也返回模块对象。
+
+这是一些例子:
+
+   >>> from importlib import import_module
+   >>> anydbm = import_module('anydbm')  # 标准的绝对导入
+   >>> anydbm
+   <module 'anydbm' from '/p/python/Lib/anydbm.py'>
+   >>> # 相对导入
+   >>> file_util = import_module('..file_util', 'distutils.command')
+   >>> file_util
+   <module 'distutils.file_util' from '/python/Lib/distutils/file_util.pyc'>
+
+"importlib" 由 Brett Cannon 实现，并在 Python 3.1 中引入。
+
+
+新增模块：sysconfig
+-------------------
+
+"sysconfig" 模块已从 Distutils 包中提取出来，成为一个新的顶级模块。
+"sysconfig" 提供了用于获取有关 Python 构建过程信息的函数：编译器开关、
+安装路径、平台名称以及 Python 是否从其源目录运行。
+
+该模块中的部分函数:
+
+* "get_config_var()" 返回来自 Python 的 Makefile 和 "pyconfig.h" 文件
+  的变量。
+
+* "get_config_vars()" 返回一个包含所有配置变量的字典。
+
+* "get_path()" 返回特定模块类型的配置路径：标准库、站点专属模块、平台
+  专属模块等等。
+
+* "is_python_build()" 会在你从 Python 源码树运行二进制可执行文件时返回
+  真值，而在其他情况下返回假值。
+
+请参阅 "sysconfig" 文档以获取更多详细信息以及完整的函数列表。
+
+Distutils 包和 "sysconfig" 现由 Tarek Ziadé 维护，他还启动了一个
+Distutils2 包（源代码仓库位于 https://hg.python.org/distutils2/），用
+于开发 Distutils 的下一代版本。
+
+
+ttk：Tk 主题组件
+----------------
+
+Tcl/Tk 8.5 包含一组主题化的小部件，这些小部件重新实现了基本的 Tk 小部
+件，但具有更可定制的外观，因此可以更接近本地平台的小部件。这个小部件集
+最初称为 Tile，但在添加到 Tcl/Tk 8.5 版本时被重命名为 Ttk（意为“主题化
+Tk”）。
+
+要了解更多信息，请阅读 "ttk" 模块文档。你可能还希望阅读 Tcl/Tk 手册页
+，其中描述了 Ttk 主题引擎，位于
+https://www.tcl.tk/man/tcl8.5/TkCmd/ttk_intro.html。一些 Python/Ttk 代
+码的截图可在 https://code.google.com/archive/p/python-
+ttk/wikis/Screenshots.wiki 查看。
+
+"tkinter.ttk" 模块由 Guilherme Polo 编写，并在 bpo-2983 中添加。另一个
+版本名为 "Tile.py"，由 Martin Franklin 编写并由 Kevin Walzer 维护，曾
+在 bpo-2618 中提议纳入，但作者们认为 Guilherme Polo 的工作更为全面。
+
+
+更新的模块：unittest
+--------------------
+
+"unittest" 模块得到了大幅增强；添加了许多新功能。这些功能大多由
+Michael Foord 实现，除非另有说明。该模块的增强版本可以单独下载，用于
+Python 2.4 至 2.6 版本，打包为 "unittest2" 包，可从 unittest2 获取。
+
+当从命令行使用时，该模块可以自动发现测试。它不如 py.test 或 nose 那么
+花哨，但提供了一种简单的方式来运行保存在一组包目录中的测试。例如，以下
+命令将搜索 "test/" 子目录中名为 "test*.py" 的任何可导入测试文件:
+
+   python -m unittest discover -s test
+
+更多详细信息，请参阅 "unittest" 模块文档。（开发于 bpo-6001。）
+
+"main()" 函数支持一些其他新选项：
+
+* "-b" 或 "--buffer" 将在每个测试期间缓冲标准输出和标准错误流。如果测
+  试通过，任何生成的输出将被丢弃；如果失败，缓冲的输出将被显示。
+
+* "-c" 或 "--catch" 将使 control-C 中断处理得更为优雅。而不是立即中断
+  测试进程，当前运行的测试将被完成，然后报告中断前的部分结果。如果你不
+  耐烦，再次按下 control-C 将导致立即中断。
+
+  此 Control-C 处理程序尝试避免在测试的代码或运行的测试已定义了自己的
+  信号处理程序时引发问题，通过检测到已设置信号处理程序并调用它来实现。
+  如果这对你不起作用，可以使用 "removeHandler()" 装饰器来标记应禁用
+  Control-C 处理的测试。
+
+* "-f" 或 "--failfast" 选项使测试执行在测试失败时立即停止，而不是继续
+  执行后续测试。（由 Cliff Dyer 建议，Michael Foord 实现；参见
+  bpo-8074。）
+
+在详细模式下运行时，进度消息现在会用 'x' 表示预期失败，用 'u' 表示意外
+成功。（由 Benjamin Peterson 贡献。）
+
+测试用例可以引发 "SkipTest" 异常来跳过测试 (参见 bpo-1034053)。
+
+"assertEqual()"、"assertTrue()" 和 "assertFalse()" 失败的错误消息现在
+提供更多信息。如果你将 "longMessage" 属性在你的 "TestCase" 类中设置为
+true，那么标准错误消息和你提供的任何附加消息都将在失败时打印出来。（由
+Michael Foord 添加；参见 bpo-5663。）
+
+"assertRaises()" 方法在调用时如果不提供可调用对象来运行，现在返回一个
+上下文处理程序。例如，你可以这样写:
+
+   with self.assertRaises(KeyError):
+       {}['foo']
+
+（由 Antoine Pitrou 实现；参见 bpo-4444。）
+
+现在支持模块级和类级的初始化（setup）与清理（teardown）夹具（fixture）
+。模块中可以包含 "setUpModule()" 和 "tearDownModule()" 函数；类中可以
+定义 "setUpClass()" 和 "tearDownClass()" 方法，这些方法必须声明为类方
+法（使用 "@classmethod" 或等效方式）。当测试运行器切换到不同模块或类中
+的测试用例时，这些函数和方法会被调用。
+
+添加了 "addCleanup()" 和 "doCleanups()" 方法。 "addCleanup()" 允许你添
+加清理函数，这些函数将无条件调用（如果 "setUp()" 失败，则在 "setUp()"
+之后调用，否则在 "tearDown()" 之后调用）。 这大大简化了测试期间的资源
+分配和释放 (参见 bpo-5679)。
+
+新增了多个提供更专业测试功能的方法。其中许多方法由谷歌工程师编写，用于
+他们内部的测试套件；Gregory P. Smith、Michael Foord 和 GvR 参与了将这
+些方法合并到 Python 版 "unittest" 模块的工作。
+
+* "assertIsNone()" 和 "assertIsNotNone()" 接受一个表达式，并验证结果是
+  否为 "None"。
+
+* "assertIs()" 和 "assertIsNot()" 接受两个值，并检查这两个值是否评估为
+  同一个对象。（由 Michael Foord 添加；参见 bpo-2578。）
+
+* "assertIsInstance()" 和 "assertNotIsInstance()" 检查结果对象是否是特
+  定类的实例，或是否是类元组中的一个类的实例。（由 Georg Brandl 添加；
+  参见 bpo-7031。）
+
+* "assertGreater()"、"assertGreaterEqual()"、"assertLess()" 和
+  "assertLessEqual()" 比较两个数量。
+
+* "assertMultiLineEqual()" 比较两个字符串，如果不相等，会显示一个有用
+  的比较结果，突出显示两个字符串中的差异。这种比较现在默认用于比较
+  Unicode 字符串时与 "assertEqual()"。
+
+* "assertRegexpMatches()" 和 "assertNotRegexpMatches()" 检查第一个参数
+  是否为与第二个参数提供的正则表达式匹配或不匹配的字符串 (参见
+  bpo-8038)。
+
+* "assertRaisesRegexp()" 检查是否引发了特定的异常，并进一步检查异常的
+  字符串表示是否与提供的正则表达式匹配。
+
+* "assertIn()" 和 "assertNotIn()" 测试 *first* 是否在 *second* 中。
+
+* "assertItemsEqual()" 测试两个提供的序列是否包含相同的元素。
+
+* "assertSetEqual()" 比较两个集合是否相等，在错误情况下仅报告集合之间
+  的差异。
+
+* 同样，"assertListEqual()" 和 "assertTupleEqual()" 比较指定的类型并解
+  释任何差异，而不一定打印它们的完整值；这些方法现在默认用于使用
+  "assertEqual()" 比较列表和元组。更一般地，"assertSequenceEqual()" 比
+  较两个序列，并可以可选地检查两个序列是否为特定类型。
+
+* "assertDictEqual()" 比较两个字典并报告差异；现在默认用于使用
+  "assertEqual()" 比较两个字典。"assertDictContainsSubset()" 检查
+  *first* 中的所有键/值对是否都在 *second* 中找到。
+
+* "assertAlmostEqual()" 和 "assertNotAlmostEqual()" 测试 *first* 和
+  *second* 是否近似相等。此方法可以将其差异四舍五入到可选指定的
+  *places* 数（默认为 7）并与零比较，或者要求差异小于提供的 *delta* 值
+  。
+
+* "loadTestsFromName()" 正确地尊重 "TestLoader" 的 "suiteClass" 属性。
+  （由 Mark Roddy 修复；参见 bpo-6866。）
+
+* 一个新的钩子允许你扩展 "assertEqual()" 方法以处理新的数据类型。
+  "addTypeEqualityFunc()" 方法接受一个类型对象和一个函数。当比较的两个
+  对象都是指定类型时，将使用该函数。此函数应比较两个对象，并在它们不匹
+  配时引发异常；建议该函数提供关于两个对象为什么不匹配的额外信息，就像
+  新的序列比较方法一样。
+
+"unittest.main()" 现在接受一个可选的 "exit" 参数。如果为假，"main()"
+不调用 "sys.exit()"，允许从交互式解释器中使用 "main()"。（由 J. Pablo
+Fernández 贡献；参见 bpo-3379。）
+
+"TestResult" 有新的 "startTestRun()" 和 "stopTestRun()" 方法，它们分别
+在测试运行之前和之后立即被调用。（由 Robert Collins 贡献；参见
+bpo-5728。）
+
+随着所有这些更改，"unittest.py" 变得异常庞大，因此该模块被转换为一个包
+，代码被分割成几个文件（由 Benjamin Peterson 完成）。这不会影响模块的
+导入或使用。
+
+参见:
+
+  https://web.archive.org/web/20210619163128/http://www.voidspace.org
+  .uk/python/articles/unittest2.shtml
+     描述新特性、如何使用它们以及各种设计决策的合理性。（由 Michael
+     Foord 撰写。）
+
+
+更新的模块：ElementTree 1.3
+---------------------------
+
+Python自带的ElementTree库已更新至1.3版本。一些新特性包括：
+
+* 各种解析函数现在接受一个*parser*关键字参数，该参数提供一个
+  "XMLParser" 实例用于解析。这使得可以覆盖文件的内部编码:
+
+     p = ET.XMLParser(encoding='utf-8')
+     t = ET.XML("""<root/>""", parser=p)
+
+  解析XML时的错误现在会引发一个 "ParseError" 异常，其实例具有一个
+  "position" 属性，包含一个(*line*, *column*)元组，指示问题的位置。
+
+* ElementTree将树转换为字符串的代码已大幅重构，在许多情况下速度大约提
+  高了一倍。"ElementTree.write()" 和 "Element.write()" 方法现在有一个
+  *method* 形参，可以是"xml"（默认）、"html"或"text"。HTML模式会将空元
+  素输出为 "<empty></empty>" 而不是 "<empty/>"，文本模式将跳过元素仅输
+  出文本块。如果将一个元素的 "tag" 属性设置为 "None" 但其子元素仍在原
+  位，则在写出树时该元素将被省略，因此无需进行更广泛的重新排列来移除单
+  个元素。
+
+  命名空间处理也得到了改进。所有 "xmlns:<whatever>" 声明现在都输出在根
+  元素上，而不是散布在生成的XML中。可以通过设置 "default_namespace" 属
+  性来设置树的默认命名空间，并可以使用 "register_namespace()" 注册新的
+  前缀。在XML模式下，可以使用true/false的 *xml_declaration* 参数来抑制
+  XML声明。
+
+* 新的 "Element" 方法： "extend()" 将序列中的项追加到元素的子元素中。
+  元素本身表现得像序列，因此可以轻松地将子元素从一个元素移动到另一个元
+  素:
+
+     from xml.etree import ElementTree as ET
+
+     t = ET.XML("""<list>
+       <item>1</item> <item>2</item>  <item>3</item>
+     </list>""")
+     new = ET.XML('<root/>')
+     new.extend(t)
+
+     # 输出 <root><item>1</item>...</root>
+     print ET.tostring(new)
+
+* 新增 "Element" 方法： "iter()" 以生成器的形式生成元素的子元素。也可
+  以使用 "for child in elem:" 来遍历元素的子元素。现有的方法
+  "getiterator()" 现在已被弃用，同样 "getchildren()" 也会被弃用，因为
+  它构造并返回子元素的列表。
+
+* 新增 "Element" 方法： "itertext()" 生成元素的所有后代文本块。例如:
+
+     t = ET.XML("""<list>
+       <item>1</item> <item>2</item>  <item>3</item>
+     </list>""")
+
+     # 输出 ['\n  ', '1', ' ', '2', '  ', '3', '\n']
+     print list(t.itertext())
+
+* 已弃用：使用元素作为布尔值 (即 "if elem:") 如果元素有任何子元素则返
+  回真，如果没有子元素则返回假。 这种行为是令人困惑的 —— "None" 是假，
+  但无子元素的元素也是假？ —— 因此现在会触发 "FutureWarning"。 在你的
+  代码中，应该明确：如果你关心子元素的数量，写 "len(elem) != 0"；如果
+  你想检查元素是否为空，写 "elem is not None"。
+
+Fredrik Lundh 开发了 ElementTree 并制作了 1.3 版本；你可以在 https://
+web.archive.org/web/20200703234532/http://effbot.org/zone/elementtree
+-13-intro.htm 阅读他描述 1.3 的文章。Florent Xicluna 在 python-dev 上
+的讨论和在 bpo-6472 中更新了包含在 Python 中的版本。
+
+
+构建和 C API 的变更
+===================
+
+针对 Python 构建过程和 C API 的变更包括:
+
+* 最新发布的 GNU 调试器 GDB 7 可以使用 Python 进行 脚本化。 当你开始调
+  试可执行程序 P 时，GDB 会查找名为 "P-gdb.py" 的文件并自动读取它。
+  Dave Malcolm 贡献了一个 "python-gdb.py"，该文件添加了许多在调试
+  Python 本身时非常有用的命令。 例如，"py-up" 和 "py-down" 可以向上或
+  向下移动一个 Python 栈帧，这通常对应于多个 C 栈帧。 "py-print" 打印
+  Python 变量的值，而 "py-bt" 打印 Python 堆栈跟踪。 （作为 bpo-8032
+  的结果添加。）
+
+* 如果你使用Python提供的 ".gdbinit" 文件，2.7版本中的 "pyo" 宏现在在调
+  试的线程不持有GIL时也能正确工作；该宏现在在打印之前会获取GIL。（由
+  Victor Stinner 贡献；参见 bpo-3632。）
+
+* "Py_AddPendingCall()" 现在线程安全，允许任何工作线程向主Python线程提
+  交通知。这对于异步IO操作特别有用。（由 Kristján Valur Jónsson 贡献；
+  参见 bpo-4293。）
+
+* 新增函数："PyCode_NewEmpty()" 创建一个空代码对象；只需要文件名、函数
+  名和首行号。这对于试图构建更有用的回溯堆栈的扩展模块非常有用。之前这
+  样的扩展需要调用 "PyCode_New()"，该函数有更多的参数。（由Jeffrey
+  Yasskin添加。）
+
+* 新增函数："PyErr_NewExceptionWithDoc()" 创建一个新的异常类，就像现有
+  的 "PyErr_NewException()" 一样，但多了一个包含新异常类文档字符串的
+  "char *" 参数。（由 'lekma' 在Python错误跟踪器中添加；参见 bpo-7033
+  。）
+
+* 新增函数："PyFrame_GetLineNumber()" 接受一个帧对象，并返回该帧当前执
+  行的行号。之前需要获取当前执行的字节码指令的索引，然后查找对应地址的
+  行号。（由 Jeffrey Yasskin 添加。）
+
+* 新增函数："PyLong_AsLongAndOverflow()" 和
+  "PyLong_AsLongLongAndOverflow()" 可将 Python 长整型数值近似转换为 C
+  语言的 long 或 long long 类型。若数值过大而无法容纳于目标输出类型中
+  ，则会设置 *溢出* 标志位，并将该标志返回给调用者。（由 Case Van
+  Horsen 贡献；参见 bpo-7528 和 bpo-7767。）
+
+* 新增函数：由于字符串到浮点数转换的重写，新增了
+  "PyOS_string_to_double()" 函数。旧的 "PyOS_ascii_strtod()" 和
+  "PyOS_ascii_atof()" 函数现已弃用。
+
+* 新增函数："PySys_SetArgvEx()" 设置 "sys.argv" 的值，并可根据
+  *updatepath* 参数的值，选择性地更新 "sys.path" 以包含包含由
+  "sys.argv[0]" 指定的脚本的目录。
+
+  添加此函数是为了关闭嵌入 Python 的应用程序的安全漏洞。旧的函数
+  "PySys_SetArgv()" 总是更新 "sys.path"，有时还会添加当前目录。这意味
+  着，如果你在受他人控制的目录中运行嵌入 Python 的应用程序，攻击者可以
+  在该目录中放置一个木马模块（例如，一个名为 "os.py" 的文件），你的应
+  用程序将会导入并运行它。
+
+  如果你维护一个嵌入 Python 的 C/C++ 应用程序，请检查你是否调用了
+  "PySys_SetArgv()"，并仔细考虑是否应该使用 *updatepath* 设置为 false
+  的 "PySys_SetArgvEx()"。
+
+  安全问题报告为 **CVE 2008-5983**；在 bpo-5753 中讨论，并由 Antoine
+  Pitrou 修复。
+
+* 新增的宏：Python 头文件现在定义了以下的宏: "Py_ISALNUM",
+  "Py_ISALPHA", "Py_ISDIGIT", "Py_ISLOWER", "Py_ISSPACE",
+  "Py_ISUPPER", "Py_ISXDIGIT", "Py_TOLOWER" 和 "Py_TOUPPER"。 所有这些
+  函数都类似于用于对字符归类的 C 标准宏，但忽略当前语言区域设置，因为
+  在一些场合下 Python 需要以语言区域无关的方式分析字符。 （由 Eric
+  Smith 添加；参见 bpo-5793。）
+
+* 移除函数："PyEval_CallObject()" 现在仅作为宏可用。保留函数版本是为了
+  保持 ABI 链接兼容性，但这已是 1997 年的事；现在可以删除了。（由
+  Antoine Pitrou 移除；参见 bpo-8276。）
+
+* 新增格式代码："PyString_FromFormat()"、 "PyString_FromFormatV()" 和
+  "PyErr_Format()" 函数现在接受 "%lld" 和 "%llu" 格式代码，用于显示 C
+  的 long long 类型。（由 Mark Dickinson 贡献；参见 bpo-7228。）
+
+* 线程和进程分叉之间的复杂交互已更改。之前，由 "os.fork()" 创建的子进
+  程可能会失败，因为子进程仅有一个线程在运行，即执行 "os.fork()" 的线
+  程。如果其他线程在执行分叉时持有锁（例如 Python 的导入锁），则该锁在
+  新进程中仍会标记为“已持有”。但在子进程中，由于其他线程未复制，子进程
+  将无法释放该锁，从而无法再执行导入。
+
+  Python 2.7 在执行 "os.fork()" 之前获取导入锁，并清理使用 "threading"
+  模块创建的任何锁。具有内部锁的 C 扩展模块，或自行调用 "fork()" 的模
+  块，将不会受益于这种清理。
+
+  （由 Thomas Wouters 修复；参见 bpo-1590864。）
+
+* "Py_Finalize()" 函数现在调用内部的 "threading._shutdown()" 函数；这
+  防止了解释器关闭时一些异常的抛出。（由 Adam Olsen 提交补丁；参见
+  bpo-1722344。）
+
+* 在使用 "PyMemberDef" 结构体定义类型的属性时，Python 将不再允许你尝试
+  删除或设置 "T_STRING_INPLACE" 属性。
+
+* 由 "ctypes" 模块定义的全局符号现在以 "Py" 或 "_ctypes" 为前缀。（由
+  Thomas Heller 实现；参见 bpo-3102。）
+
+* 新增配置选项："--with-system-expat" 开关允许构建 "pyexpat" 模块以使
+  用系统 Expat 库。（由 Arfrever Frehtes Taifersar Arahesis 贡献；参见
+  bpo-7609。）
+
+* 新增配置选项："--with-valgrind" 选项现在将禁用 pymalloc 分配器，该分
+  配器难以被 Valgrind 内存错误检测器正确分析。因此，Valgrind 将更好地
+  检测内存泄漏和溢出。（由 James Henstridge 贡献；参见 bpo-2422。）
+
+* 新增配置选项：你现在可以提供一个空字符串给 "--with-dbmliborder=" 以
+  禁用所有各种 DBM 模块。（由 Arfrever Frehtes Taifersar Arahesis 添加
+  ；参见 bpo-6491。）
+
+* **configure** 脚本现在检查某些 32 位 Intel 芯片上的浮点舍入错误，并
+  定义一个 "X87_DOUBLE_ROUNDING" 预处理器定义。当前没有代码使用这个定
+  义，但它是可用的，如果有人希望使用它。（由 Mark Dickinson 添加；参见
+  bpo-2937。）
+
+  现在 **configure** 还设置了一个 "LDCXXSHARED" Makefile 变量以支持
+  C++ 链接。 （由 Arfrever Frehtes Taifersar Arahesis 贡献;
+  bpo-1222585。）
+
+* 构建过程现在创建必要的文件以支持 pkg-config。（由 Clinton Roy 贡献；
+  参见 bpo-3585。）
+
+* 构建过程现在支持 Subversion 1.7。（由 Arfrever Frehtes Taifersar
+  Arahesis 贡献；参见 bpo-6094。）
+
+
+Capsule 对象
+------------
+
+Python 3.1 新增了一种 C 数据类型 "PyCapsule"，用于为扩展模块提供 C 语
+言 API 接口。胶囊（capsule）本质上是 C 语言中 "void *" 指针的封装载体
+，并作为模块属性对外暴露；例如，"socket" 模块的 API 通过 "socket.CAPI"
+暴露，而 "unicodedata" 模块则暴露了 "ucnhash_CAPI"。其他扩展模块可以导
+入该模块，访问其字典以获取胶囊对象，进而获取其中的 "void *" 指针——该指
+针通常指向一个指针数组，其中包含模块各类 API 函数的地址。
+
+已经有一个用于此目的的现有数据类型，"PyCObject"，但它不提供类型安全。
+用纯 Python 编写的恶意代码可能会通过从模块 A 获取 "PyCObject" 并以某种
+方式将其替换为模块 B 中的 "PyCObject" 来导致段错误。胶囊知道它们自己的
+名称，获取指针需要提供名称：
+
+   void *vtable;
+
+   if (!PyCapsule_IsValid(capsule, "mymodule.CAPI") {
+           PyErr_SetString(PyExc_ValueError, "argument type invalid");
+           return NULL;
+   }
+
+   vtable = PyCapsule_GetPointer(capsule, "mymodule.CAPI");
+
+你可以确信 "vtable" 指向你所期望的内容。如果传递了不同的胶囊，
+"PyCapsule_IsValid()" 会检测到不匹配的名称并返回 false。有关使用这些对
+象的更多信息，请参阅 给扩展模块提供 C API。
+
+Python 2.7 现在内部使用胶囊来提供各种扩展模块 API，但
+"PyCObject_AsVoidPtr()" 已被修改以处理胶囊，保留了与 "PyCObject" 接口
+的编译时兼容性。使用 "PyCObject_AsVoidPtr()" 将发出
+"PendingDeprecationWarning"，默认情况下是静默的。
+
+在 Python 3.1 中实现并向下移植到 2.7，由 Larry Hastings 完成；在
+bpo-5630 中讨论。
+
+
+特定于 Windows 的更改：
+-----------------------
+
+* "msvcrt" 模块现在包含来自 "crtassem.h" 头文件的一些常量：
+  "CRT_ASSEMBLY_VERSION"、 "VC_ASSEMBLY_PUBLICKEYTOKEN" 和
+  "LIBRARIES_ASSEMBLY_NAME_PREFIX"。（由 David Cournapeau 贡献；参见
+  bpo-4365。）
+
+* 用于访问注册表的 "_winreg" 模块现在实现了 "CreateKeyEx()" 和
+  "DeleteKeyEx()" 函数，这些是之前支持函数的扩展版本，它们接受几个额外
+  的参数。"DisableReflectionKey()"、 "EnableReflectionKey()" 和
+  "QueryReflectionKey()" 也经过了测试和文档记录。（由 Brian Curtin 实
+  现：bpo-7347。）
+
+* 新的 "_beginthreadex()" API 用于启动线程，现在使用了本地线程局部存储
+  函数。（由 Kristján Valur Jónsson 贡献；参见 bpo-3582。）
+
+* "os.kill()" 函数现在在 Windows 上工作。信号值可以是常量
+  "CTRL_C_EVENT"、 "CTRL_BREAK_EVENT" 或任何整数。前两个常量将向子进程
+  发送 "Control"-"C" 和 "Control"-"Break" 键盘事件；任何其他值将使用
+  "TerminateProcess()" API。（由 Miki Tebeka 贡献；参见 bpo-1220212。
+  ）
+
+* "os.listdir()" 函数现在在空路径时正确地失败。（由 Hirokazu Yamamoto
+  修复；参见 bpo-5913。）
+
+* "mimetypes" 模块在初始化时现在会从 Windows 注册表读取 MIME 数据库。
+  （由 Gabriel Genellina 提供补丁；参见 bpo-4969。）
+
+
+特定于 Mac OS X 的更改：
+------------------------
+
+* 路径 "/Library/Python/2.7/site-packages" 现在附加到 "sys.path"，以便
+  在系统安装和用户安装的同一版本的副本之间共享添加的包。（由 Ronald
+  Oussoren 更改；参见 bpo-4865。）
+
+  在 2.7.13 版本发生变更: 自2.7.13版本起，这一变更已被移除。
+  "/Library/Python/2.7/site-packages"，即Apple提供的系统Python 2.7所使
+  用的site-packages目录，不再被追加到用户安装的Python（例如通过
+  python.org安装器安装的Python）的 "sys.path" 中。自 macOS 10.12 起，
+  Apple 更改了系统 site-packages 目录的配置方式，这可能导致安装pip组件
+  （如setuptools）失败。为系统 Python 安装的包将不再与用户安装的
+  Python 共享。(参见 bpo-28440)
+
+
+特定于 FreeBSD 的更改：
+-----------------------
+
+* FreeBSD 7.1中的 "SO_SETFIB" 常量，用于与 "socket()" 方法的
+  "getsockopt()"/"setsockopt()" 一起选择备用路由表，现在已在 "socket"
+  模块中提供。（由 Kyle VanderBeek 添加;参见 bpo-8235。）
+
+
+其他的变更和修正
+================
+
+* 两个基准测试脚本，"iobench" 和 "ccbench"，已被添加到 "Tools" 目录中
+  。"iobench" 用于测量内置文件I/O对象（由 "open()" 返回）在进行各种操
+  作时的速度，而 "ccbench" 是一个并发基准测试，旨在测量在使用不同数量
+  线程执行多个任务时的计算吞吐量、线程切换延迟和IO处理带宽。
+
+* "Tools/i18n/msgfmt.py" 脚本现在能够理解 ".po" 文件中的复数形式。（由
+  Martin von Löwis 修复;参见 bpo-5464。）
+
+* 当从具有现有 ".py" 对应文件的 ".pyc" 或 ".pyo" 文件导入模块时，如果
+  原始文件名已过时，则生成的代码对象的 "co_filename" 属性将被覆盖。这
+  可能发生在文件被重命名、移动或通过不同路径访问时。（由 Ziga
+  Seilnacht 和 Jean-Paul Calderone 提供补丁;参见 bpo-1180193。)
+
+* "regrtest.py" 脚本现在接受一个 "--randseed=" 开关，该开关需要一个整
+  数作为随机种子，用于 "-r" 选项以随机顺序执行测试。"-r" 选项还会报告
+  所使用的种子（由 Collin Winter 添加）。
+
+* 另一个 "regrtest.py" 开关是 "-j"，它需要一个整数来指定并行运行的测试
+  数量。 这可以减少多核机器上的总运行时间。 此选项与多个其他选项兼容，
+  包括已知会产生长运行时间的 "-R" 开关 (由 Antoine Pitrou 添加，参见
+  bpo-6152)。 这也可以与新的 "-F" 开关一起使用，该开关会循环运行选定的
+  测试，直到它们失败为止 (由 Antoine Pitrou 添加；参见 bpo-7312)。
+
+* 当作为脚本执行时，"py_compile.py" 模块现在接受 "'-'" 作为参数，这将
+  从标准输入读取要编译的文件名列表 (由 Piotr Ożarowski 贡献；参见
+  bpo-8233)。
+
+
+移植到 Python 2.7
+=================
+
+本节列出了先前描述的变更以及可能需要修改你的代码的其他问题修正:
+
+* "range()" 函数现在更一致地处理其参数；它将调用 "__int__()" 方法来处
+  理提供给它的非浮点、非整数参数 (由 Alexander Belopolsky 修复；参见
+  bpo-1533)。
+
+* 字符串的 "format()" 方法将浮点数和复数的默认精度从 6 小数位改为 12
+  小数位，这与 "str()" 使用的精度一致 (由 Eric Smith 更改；参见
+  bpo-5920)。
+
+* 由于对 "with" 语句的优化，特殊方法 "__enter__()" 和 "__exit__()" 必
+  须属于对象的类型，不能直接附加到对象的实例上。 这影响新式类（从
+  "object" 派生）和 C 扩展类型 (参见 bpo-6101)。
+
+* 由于 Python 2.6 中的一个 bug，传递给 "__exit__()" 方法的 *exc_value*
+  参数通常是异常的字符串表示，而不是实例。这在 2.7 中已修复，因此
+  *exc_value* 将如预期那样是一个实例。（由 Florent Xicluna 修复；参见
+  bpo-7853。）
+
+* 当使用 "__slots__" 设置一组受限属性时，删除未设置的属性不会像预期那
+  样引发 "AttributeError"。（由 Benjamin Peterson 修复；参见 bpo-7604
+  。）
+
+在标准库中:
+
+* 涉及 "datetime" 实例的操作，如果结果年份超出支持范围，并不总是引发
+  "OverflowError"。现在此类错误将更仔细地检查，并会引发异常。（由 Mark
+  Leander 报告，Anand B. Pillai 和 Alexander Belopolsky 提供补丁；参见
+  bpo-7150。）
+
+* 当使用 "Decimal" 实例与字符串的 "format()" 方法时，默认对齐方式之前
+  是左对齐。这已更改为右对齐，可能会改变你的程序输出。（由 Mark
+  Dickinson 更改；参见 bpo-6857。）
+
+  涉及信号 NaN 值 (或 "sNAN") 的比较现在会触发 "InvalidOperation"，而
+  不是根据比较运算符静默地返回真或假值。 静默 NaN 值 (或 "NaN") 现在可
+  以被哈希。 (由 Mark Dickinson 修复；参见 bpo-7279)
+
+* "xml.etree.ElementTree" 库在输出 XML 处理指令 (看起来像 "<?xml-
+  stylesheet href="#style1"?>") 或注释 (看起来像 "<!-- comment -->")
+  时，不再转义与符号“&”和尖括号“<>”。 （由 Neil Muller 编写补丁；参见
+  bpo-2746。）
+
+* "StringIO" 对象的 "readline()" 方法在请求负长度时现在不执行任何操作
+  ，与其他文件类对象一致。（参见 bpo-7348。）
+
+* "syslog" 模块现在将使用 "sys.argv[0]" 的值作为标识符，而不是之前的默
+  认值 "'python'"。（由 Sean Reifschneider 更改；参见 bpo-8451。）
+
+* "tarfile" 模块的默认错误处理已更改，不再抑制致命错误。之前的默认错误
+  级别为 0，这意味着错误只会导致一条消息被写入调试日志，但由于调试日志
+  默认不激活，这些错误会被忽略。现在的默认错误级别为 1，如果出现错误会
+  引发异常。（由 Lars Gustäbel 改变；参见 bpo-7357。）
+
+* "urlparse" 模块的 "urlsplit()" 现在以一种符合 **RFC 3986** 的方式处
+  理未知的 URL 方案：如果 URL 形如 ""<something>://...""，则 "://" 之
+  前的文本被视为方案，即使它是一个模块不知道的自定义方案。这一更改可能
+  会破坏针对旧行为进行工作的代码。例如，Python 2.6.4 或 2.5 将返回以下
+  内容：
+
+     >>> import urlparse
+     >>> urlparse.urlsplit('invented://host/filename?query')
+     ('invented', '', '//host/filename?query', '', '')
+
+  Python 2.7（以及Python 2.6.5）将返回：
+
+     >>> import urlparse
+     >>> urlparse.urlsplit('invented://host/filename?query')
+     ('invented', 'host', '/filename?query', '', '')
+
+  （Python 2.7实际上产生的输出略有不同，因为它返回的是一个具名元组而不
+  是标准元组。）
+
+对于C 扩展模块：
+
+* 使用整数格式代码与 "PyArg_Parse*" 函数族的 C 扩展现在将引发
+  "TypeError" 异常，而不是触发 "DeprecationWarning" (bpo-5080)。
+
+* 使用新的 "PyOS_string_to_double()" 函数，而不是已弃用的旧函数
+  "PyOS_ascii_strtod()" 和 "PyOS_ascii_atof()"。
+
+对于嵌入 Python 的应用程序：
+
+* "PySys_SetArgvEx()" 函数已添加，允许应用程序在使用现有的
+  "PySys_SetArgv()" 函数时关闭安全漏洞。检查你是否调用了
+  "PySys_SetArgv()"，并仔细考虑是否应该使用 *updatepath* 设置为 false
+  的 "PySys_SetArgvEx()"。
+
+
+Python 2.7 维护版本中添加的新特性
+=================================
+
+当情况确实需要时，新特性可能会添加到 Python 2.7 的维护版本中。任何此类
+添加必须经过 Python 增强提案（PEP）流程，并充分说明为什么不能仅通过将
+新功能添加到 Python 3 或将其发布到 Python 包索引来妥善解决。
+
+除了下面列出的具体提案外，还有一个一般性豁免，允许在任何 Python 2.7 维
+护版本中添加新的 "-3" 警告。
+
+
+调试模式的两个新环境变量
+------------------------
+
+在调试模式下，默认不写入 "[xxx refs]" 统计信息，现在还必须设置
+"PYTHONSHOWREFCOUNT" 环境变量。（由 Victor Stinner 贡献；参见
+bpo-31733。）
+
+当 Python 编译时定义了 "COUNT_ALLOC"，默认不再转储分配计数：现在还必须
+设置 "PYTHONSHOWALLOCCOUNT" 环境变量。此外，分配计数现在转储到 stderr
+，而不是 stdout。（由 Victor Stinner 贡献；参见 bpo-31692。）
+
+Added in version 2.7.15.
+
+
+PEP 434：针对所有分支的 IDLE 增强功能豁免提案
+---------------------------------------------
+
+**PEP 434** 描述了对随 Python 一起提供的 IDLE 开发环境所做的更改的一般
+性豁免。此豁免使 IDLE 开发人员能够在所有受支持的 Python 2 和 3 版本中
+提供更一致的用户体验。
+
+有关 IDLE 任何变更的详细信息，请参考特定版本的 NEWS 文件。
+
+
+PEP 466: 针对 Python 2.7 的网络安全加固
+---------------------------------------
+
+**PEP 466** 描述了一系列已获批准纳入 Python 2.7 维护版本的网络安全增强
+提案，其中首个变更出现在 Python 2.7.7 版本中。
+
+**PEP 466** Python 2.7.7 中添加的相关特性：
+
+* "hmac.compare_digest()" 从 Python 3 向下移植，以向 Python 2 应用提供
+  抵抗定时攻击的比较操作。（由 Alex Gaynor 贡献；参见 bpo-21306。）
+
+* 官方 Windows 安装程序中的 OpenSSL 1.0.1g 已在 python.org 上升级。（
+  由 Zachary Ware 贡献；参见 bpo-21462。）
+
+**PEP 466** Python 2.7.8 中添加的相关特性：
+
+* "hashlib.pbkdf2_hmac()" 从 Python 3 向下移植，以向 Python 2 应用广泛
+  提供适用于安全密码存储的哈希算法。（由 Alex Gaynor 贡献；参见
+  bpo-21304。）
+
+* 官方 Windows 安装程序中的 OpenSSL 1.0.1h 已在 python.org 上升级。（
+  由 Zachary Ware 针对 **CVE 2014-0224`在 :issue:`21671** 中贡献。）
+
+**PEP 466** Python 2.7.9 中添加的相关特性：
+
+* 大部分 Python 3.4 的 "ssl" 模块已向下移植。这意味着 "ssl" 现在支持服
+  务器名称指示、TLS1.x 设置、访问平台证书存储、"SSLContext" 类以及其他
+  特性。（由 Alex Gaynor 和 David Reid 贡献；参见 bpo-21308。）
+
+  有关具体细节，请参阅模块文档中标记为"Version added: 2.7.9"的说明注释
+  。
+
+* "os.urandom()" 已更改，以缓存对 "/dev/urandom" 的文件描述符，而不是
+  在每次调用时重新打开 "/dev/urandom"。（由 Alex Gaynor 贡献；参见
+  bpo-21305。）
+
+* "hashlib.algorithms_guaranteed" 和 "hashlib.algorithms_available" 从
+  Python 3 向下移植，以简化 Python 2 应用选择最强可用哈希算法的过程。
+  （由 Alex Gaynor 在 bpo-21307 中贡献）
+
+
+PEP 477: 将 ensurepip (PEP 453) 向下移植到 Python 2.7
+-----------------------------------------------------
+
+**PEP 477** 批准将 **PEP 453** ensurepip 模块及其启用的新增文档纳入
+Python 2.7 维护版本，首次出现在 Python 2.7.9 版本中。
+
+
+默认对 pip 进行初始配置
+~~~~~~~~~~~~~~~~~~~~~~~
+
+新的 "ensurepip" 模块 (定义于 **PEP 453**) 提供了一个标准的跨平台机制
+，用于将 pip 安装程序引导到 Python 安装中。 Python 2.7.9 中包含的
+"pip" 版本是 "pip" 1.5.6，未来的 2.7.x 维护版本将更新捆绑版本为创建发
+布候选时最新的 "pip" 版本。
+
+默认情况下，命令 "pip"、"pipX" 和 "pipX.Y" 将在所有平台上安装（其中
+X.Y 代表 Python 安装的版本），同时安装 "pip" Python 包及其依赖项。
+
+对于 CPython 在 POSIX 系统上的源代码构建，"make install" 和 "make
+altinstall" 命令默认不会自动安装 "pip"。这种行为可以通过配置选项控制，
+并通过 Makefile 选项覆盖。
+
+在 Windows 和 Mac OS X 上，现在 CPython 安装程序默认会将 "pip" 与
+CPython 本身一同安装（用户可以在安装过程中选择不安装它）。 Window 用户
+需要选择执行 "PATH" 修改以使 "pip" 在命令行中默认可用，在其他情况下它
+仍然可以通过 Windows 版 Python 启动器以 "py -m pip" 的方式使用。
+
+如 **在 PEP 中讨论的**，平台打包者可以选择默认不安装这些命令，只要在调
+用时，它们提供清晰简单的说明，说明如何在那个平台上安装它们（通常使用系
+统包管理器）。
+
+
+文档更改
+~~~~~~~~
+
+作为此项更改的一部分，文档的 安装 Python 模块 和 分发 Python 模块 章节
+已经完全重新设计，快速入门和 FAQ 文档也是如此。 大部分打包指南文档现在
+都已被移至由 Python Packaging Authority 维护的 Python Packaging User
+Guide 以及相应的独立项目文档。
+
+不过，由于目前迁移过程尚未完成，这些指南的旧版本仍然可通过 使用
+setuptools 构建 C 和 C++ 扩展 和 使用 setuptools 构建 C 和 C++ 扩展 来
+访问。
+
+参见:
+
+  **PEP 453** -- Python安装过程中pip的显式引导机制
+     PEP 由Donald Stufft 和 Nick Coghlan 撰写，由 Donald Stufft、Nick
+     Coghlan、Martin von Löwis 和 Ned Deily 实现。
+
+
+PEP 476: 默认为 stdlib http 客户端启用证书验证
+----------------------------------------------
+
+**PEP 476** 更新了 "httplib" 及其使用的模块，例如 "urllib2" 和
+"xmlrpclib"，现在默认验证服务器提供的证书是否由平台信任存储中的证书颁
+发机构签名，且其主机名与请求的主机名匹配，显著提高了许多应用程序的安全
+性。这一更改在 Python 2.7.9 版本中实现。
+
+对于需要之前版本的旧有行为的应用程序，可以传入一个替代的上下文:
+
+   import urllib2
+   import ssl
+
+   # 这将禁用所有验证
+   context = ssl._create_unverified_context()
+
+   # 这允许为特定主机使用特定证书，该证书不需要
+   # 在信任存储中
+   context = ssl.create_default_context(cafile="/path/to/file.crt")
+
+   urllib2.urlopen("https://invalid-cert", context=context)
+
+
+PEP 493：适用于Python 2.7 的 HTTPS 验证迁移工具
+-----------------------------------------------
+
+**PEP 493** 提供了额外的迁移工具，以支持对包含依赖历史宽松服务器证书处
+理的应用程序和服务的环境进行更渐进的基础设施升级过程。这些添加内容在
+Python 2.7.12 版本中实现。
+
+这些工具旨在用于那些无法修改以显式传递更宽松 SSL 上下文的应用程序和服
+务，在建立连接时使用。
+
+对于完全无法修改的应用程序和服务，可以设置新的 "PYTHONHTTPSVERIFY" 环
+境变量为 "0"，以将整个 Python 进程恢复到 Python 2.7.8 及早期版本的默认
+宽松行为。
+
+对于连接建立代码无法修改，但整体应用程序可以修改的情况，可以使用新的
+"ssl._https_verify_certificates()" 函数来调整运行时的默认行为。
+
+
+新增 "make regen-all" 构建目标
+------------------------------
+
+为了简化交叉编译，并确保 CPython 能够可靠地编译而不需要已存在可用的
+Python 版本，基于 autotools 的构建系统将不再尝试根据文件修改时间隐式地
+重新编译已生成的文件。
+
+取而代之的是，新增了一个 "make regen-all" 命令以便在需要时强制重新生成
+这些文件（例如在基于预生成版本构建了 Python 的初始版本之后）。
+
+还定义了其他一些更具选择性的重生成目标 —— 详情参见 Makefile.pre.in。
+
+（由 Victor Stinner 在 bpo-23404 中贡献。）
+
+Added in version 2.7.14.
+
+
+移除了 "make touch" 构建目标
+----------------------------
+
+之前用于通过更新生成文件的修改时间来请求隐式的重新生成这些文件的 "make
+touch" 构建目标已被移除。
+
+它已被新的 "make regen-all" 目标所替代。
+
+（由 Victor Stinner 在 bpo-23404 中贡献。）
+
+在 2.7.14 版本发生变更.
+
+
+致谢
+====
+
+作者要感谢以下人员为本文的各种草案提供建议、更正和帮助： Nick Coghlan
+、 Philip Jenvey、 Ryan Lovett、 R. David Murray、 Hugh Secker-Walker
+。

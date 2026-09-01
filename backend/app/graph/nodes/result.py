@@ -28,7 +28,7 @@ _ISSUE_FIX_TEMPLATE = """\
 {suggestion}
 
 要求：
-1. 严格遵循上述已确认的技术版本
+1. {version_rule}
 2. 不修改与该问题无关的代码
 3. 不升级依赖
 4. 不改变现有公开 API，除非问题明确要求
@@ -46,7 +46,7 @@ _PROJECT_FIX_TEMPLATE = """\
 {issues}
 
 统一修改要求：
-1. 严格遵循上述已确认的技术版本
+1. {version_rule}
 2. 逐个修复以上问题，不引入与问题无关的改动
 3. 不升级依赖
 4. 不改变现有公开 API，除非问题明确要求
@@ -99,7 +99,9 @@ _MIGRATION_PROJECT_FIX_TEMPLATE = """\
 
 
 def _format_versions(confirmed_versions: dict[str, str]) -> str:
-    return "\n".join(f"- {tech} {version}" for tech, version in confirmed_versions.items())
+    # Code Review 允许无版本信息（降级审查）：模板中给出占位说明而非空段落
+    return "\n".join(f"- {tech} {version}" for tech, version in confirmed_versions.items()) \
+        or "（未提供版本信息，修复时基于通用最佳实践即可，不要擅自升级依赖）"
 
 
 def generate_result(state: ReviewState) -> dict:
@@ -111,6 +113,12 @@ def generate_result(state: ReviewState) -> dict:
 
 def _generate_review_result(state: ReviewState) -> dict:
     versions_text = _format_versions(state["confirmed_versions"])
+    # 无版本降级审查：修改要求不再强调遵循版本（模板与占位说明保持一致）
+    version_rule = (
+        "严格遵循上述已确认的技术版本"
+        if state["confirmed_versions"]
+        else "基于通用最佳实践修改，不要擅自升级依赖"
+    )
 
     issues = []
     issue_lines = []
@@ -123,6 +131,7 @@ def _generate_review_result(state: ReviewState) -> dict:
             source=issue["source"],
             evidence=issue["evidence"] or "（无知识库证据，基于 LLM 推理）",
             suggestion=issue["suggestion"],
+            version_rule=version_rule,
         )
         issues.append({**issue, "fix_prompt": fix_prompt})
         issue_lines.append(
@@ -135,6 +144,7 @@ def _generate_review_result(state: ReviewState) -> dict:
         versions=versions_text,
         count=len(issues),
         issues="\n\n".join(issue_lines) if issue_lines else "（未发现问题）",
+        version_rule=version_rule,
     )
 
     return {"issues": issues, "project_fix_prompt": project_fix_prompt}

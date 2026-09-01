@@ -87,7 +87,12 @@ def build_tools(
         tech = technology.lower()
         expected = confirmed_versions.get(tech)
         if expected is None:
-            return f"[错误] 未检测到技术 {technology}，可检索的技术：{', '.join(confirmed_versions) or '无'}"
+            if not confirmed_versions:
+                return (
+                    "[错误] 本项目未提供任何技术版本信息，官方文档检索不可用。"
+                    "请直接基于自身知识判断，source 设为 \"llm_inference\"，不要重试。"
+                )
+            return f"[错误] 未检测到技术 {technology}，可检索的技术：{', '.join(confirmed_versions)}"
         # 合法版本集合：当前已确认版本 +（Migration 时）目标版本，归一化后比较
         allowed = {_norm_version(expected)}
         target = target_versions.get(tech)

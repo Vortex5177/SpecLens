@@ -1,0 +1,1048 @@
+Python 的新变化
+***************
+
+这个“Python 有什么新变化？”系列内容会带您浏览 Python 大版本之间重要的
+变化。在新版发布后，如果您希望掌握最新变化，请务必阅读这些内容。
+
+* Python 3.14 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 移除
+
+  * 弃用
+
+  * CPython 字节码的改变
+
+  * C API 的变化
+
+  * 构建的改变
+
+  * 移植到 Python 3.14
+
+  * 3.14.1 中的重要变化
+
+  * Notable changes in 3.14.5
+
+* Python 3.13 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 被移除的模块与 API
+
+  * 新的弃用
+
+  * CPython 字节码的变化
+
+  * C API 的变化
+
+  * 构建变化
+
+  * 移植到 Python 3.13
+
+  * 回归测试的变化
+
+* Python 3.12 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 有关类型提示的新增特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * CPython 字节码的改变
+
+  * 演示和工具
+
+  * 弃用
+
+  * 移除
+
+  * 移植到 Python 3.12
+
+  * 构建变化
+
+  * C API 的变化
+
+* Python 3.11 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 有关类型提示的新增特性
+
+  * 其他语言特性修改
+
+  * 其他 CPython 实现的改变
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 更快的 CPython
+
+  * CPython 字节码的改变
+
+  * 弃用
+
+  * 计划在 Python 3.12 中移除
+
+  * 移除
+
+  * 移植到 Python 3.11
+
+  * 构建变化
+
+  * C API 的变化
+
+  * 3.11.4 中的重要变化
+
+  * 3.11.5 中的重要变化
+
+* Python 3.10 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 有关类型提示的新增特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 弃用
+
+  * 移除
+
+  * 移植到 Python 3.10
+
+  * CPython 字节码的改变
+
+  * 编译版的变化
+
+  * C API 的变化
+
+  * 3.10.7 中的重要安全特性
+
+  * 3.10.8 中的重要安全特性
+
+  * 3.10.12 中的重要变化
+
+* Python 3.9 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 请检查代码中的 DeprecationWarning。
+
+  * 新的特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 弃用
+
+  * 移除
+
+  * 移植到 Python 3.9
+
+  * 构建的改变
+
+  * C API 的改变
+
+  * Python 3.9.1 中的重要变化
+
+  * Python 3.9.2 中的重要变化
+
+  * Python 3.9.3 中的重要变化
+
+  * Python 3.9.5 中的重要变化
+
+  * 3.9.14 中的重要安全特性
+
+  * 3.9.17 中的重要变化
+
+* Python 3.8 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 构建和 C API 的改变
+
+  * 弃用
+
+  * API 与特性的移除
+
+  * 移植到 Python 3.8
+
+  * Python 3.8.1 中的重要变化
+
+  * Python 3.8.2 中的重要变化
+
+  * Python 3.8.3 中的重要变化
+
+  * Python 3.8.8 中的重要变化
+
+  * Python 3.8.9 中的重要变化
+
+  * Python 3.8.10 中的重要变化
+
+  * Python 3.8.10 中的重要变化
+
+  * Python 3.8.12 中的重要变化
+
+  * 3.8.14 中的重要安全特性
+
+  * 3.8.17 中的重要变化
+
+* Python 3.7 有什么新变化
+
+  * 摘要 - 发布重点
+
+  * 新的特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * C API 的改变
+
+  * 构建的改变
+
+  * 性能优化
+
+  * 其他 CPython 实现的改变
+
+  * 已弃用的 Python 行为
+
+  * 已弃用的 Python 模块、函数和方法
+
+  * 已弃用的 C API 函数和类型
+
+  * 平台支持的移除
+
+  * API 与特性的移除
+
+  * 移除的模块
+
+  * Windows 专属的改变
+
+  * 移植到 Python 3.7
+
+  * Python 3.7.1 中的重要变化
+
+  * Python 3.7.2 中的重要变化
+
+  * Python 3.7.6 中的重要变化
+
+  * Python 3.7.10 中的重要变化
+
+  * Python 3.7.11 中的重要变化
+
+  * 3.7.14 中的重要安全特性
+
+* Python 3.6 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 构建和 C API 的改变
+
+  * 其他改进
+
+  * 弃用
+
+  * 移除
+
+  * 移植到 Python 3.6
+
+  * Python 3.6.2 中的重要变化
+
+  * Python 3.6.4 中的重要变化
+
+  * Python 3.6.5 中的重要变化
+
+  * Python 3.6.7 中的重要变化
+
+  * Python 3.6.10 中的重要变化
+
+  * Python 3.6.13 中的重要变化
+
+  * Python 3.6.14 中的重要变化
+
+* Python 3.5 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * 新的特性
+
+  * 其他语言特性修改
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 其他模块级更改
+
+  * 性能优化
+
+  * 构建和 C API 的改变
+
+  * 弃用
+
+  * 移除
+
+  * 移植到Python 3.5
+
+  * Python 3.5.4 的显著变化
+
+* Python 3.4 有什么新变化
+
+  * 摘要 - 发布重点
+
+  * 新的特性
+
+  * 新增模块
+
+  * 改进的模块
+
+  * CPython 实现的变化
+
+  * 弃用
+
+  * 移除
+
+  * 移植到 Python 3.4
+
+  * 3.4.3 的变化
+
+* Python 3.3 有什么新变化
+
+  * 摘要 -- 发布重点
+
+  * PEP 405: 虚拟环境
+
+  * PEP 420: 隐式命名空间包
+
+  * PEP 3118: 新的内存视图实现和缓冲协议文档
+
+  * PEP 393: 灵活的字符串表示
+
+  * PEP 397: 适用于Windows的Python启动器
+
+  * PEP 3151: 重写 OS 和 IO 异常的层次结构
+
+  * PEP 380: 委托给子生成器的语法
+
+  * PEP 409: 清除异常上下文
+
+  * PEP 414: 显式的Unicode文本
+
+  * PEP 3155: 类和函数的限定名称
+
+  * PEP 412: Key-Sharing Dictionary
+
+  * PEP 362: 函数签名对象
+
+  * PEP 421: 添加 sys.implementation
+
+  * 使用 importlib 作为导入的实现
+
+  * 其他语言特性修改
+
+  * 更细粒度的导入锁
+
+  * 内置函数和类型
+
+  * 新增模块
+
+  * 改进的模块
+
+  * 性能优化
+
+  * 构建和 C API 的改变
+
+  * 弃用
+
+  * 移植到 Python 3.3
+
+* Python 3.2 有什么新变化
+
+  * PEP 384: 定义稳定的ABI
+
+  * PEP 389: Argparse 命令行解析模块
+
+  * PEP 391:  基于字典的日志配置
+
+  * PEP 3148:  "concurrent.futures" 模块
+
+  * PEP 3147: PYC 仓库目录
+
+  * PEP 3149: 带有 ABI 版本标签的 .so 文件
+
+  * PEP 3333: Python Web服务器网关接口v1.0.1
+
+  * 其他语言特性修改
+
+  * 新增、改进和弃用的模块
+
+  * 多线程
+
+  * 性能优化
+
+  * Unicode
+
+  * 编解码器
+
+  * 文档
+
+  * IDLE
+
+  * 代码库
+
+  * 构建和 C API 的改变
+
+  * 移植到 Python 3.2
+
+* Python 3.1 有什么新变化
+
+  * PEP 372: 有序字典
+
+  * PEP 378: 千位分隔符的格式说明符
+
+  * 其他语言特性修改
+
+  * 新增，改进和弃用的模块
+
+  * 性能优化
+
+  * IDLE
+
+  * 构建和 C API 的改变
+
+  * 移植到 Python 3.1
+
+* Python 3.0 有什么新变化
+
+  * 常见的绊脚石
+
+  * 语法变化概述
+
+  * 已存在于 Python 2.6 中的改变
+
+  * 库的修改
+
+  * **PEP 3101**: 字符串格式化的新方式
+
+  * 对异常的修改
+
+  * 其他杂项修改
+
+  * 构建和 C API 的改变
+
+  * 性能
+
+  * 移植到 Python 3.0
+
+* Python 2.7 有什么新变化
+
+  * Python 2.x的未来
+
+  * 对于弃用警告处理方式的改变
+
+  * Python 3.1 特性
+
+  * PEP 372：将有序字典添加到 collections
+
+  * PEP 378: 千位分隔符的格式说明符
+
+  * PEP 389：用于解析命令行的 argparse 模块
+
+  * PEP 391: 基于字典的日志配置
+
+  * PEP 3106: 字典视图
+
+  * PEP 3137: memoryview 对象
+
+  * 其他语言特性修改
+
+  * 新增和改进的模块
+
+  * 构建和 C API 的变更
+
+  * 其他的变更和修正
+
+  * 移植到 Python 2.7
+
+  * Python 2.7 维护版本中添加的新特性
+
+  * 致谢
+
+* Python 2.6 有什么新变化
+
+  * Python 3.0
+
+  * 开发过程的变化
+
+  * PEP 343: "with" 语句
+
+  * PEP 366: 从主模块显式相对导入
+
+  * PEP 370: 分用户的 site-packages 目录
+
+  * PEP 371: "multiprocessing" (多进程)包
+
+  * PEP 3101: 高级字符串格式
+
+  * PEP 3105: "print" 改为函数
+
+  * PEP 3110: 异常处理的变更
+
+  * PEP 3112: 字节字面值
+
+  * PEP 3116: 新 I/O 库
+
+  * PEP 3118: 修改缓冲区协议
+
+  * PEP 3119: 抽象基类
+
+  * PEP 3127: 整型文字支持和语法
+
+  * PEP 3129: 类装饰器
+
+  * PEP 3141: 数字的类型层级结构
+
+  * 其他语言特性修改
+
+  * 新增和改进的模块
+
+  * 弃用和移除
+
+  * 构建和 C API 的变更
+
+  * 移植到Python 2.6
+
+  * 致谢
+
+* Python 2.5 有什么新变化
+
+  * PEP 308: 条件表达式
+
+  * PEP 309: 部分功能应用
+
+  * PEP 314: Python软件包的元数据 v1.1
+
+  * PEP 328: 绝对导入和相对导入
+
+  * PEP 338: 将模块作为脚本执行
+
+  * PEP 341: 统一 try/except/finally
+
+  * PEP 342: 生成器的新特性
+
+  * PEP 343: "with" 语句
+
+  * PEP 352: 异常作为新型的类
+
+  * PEP 353: 使用ssize_t作为索引类型
+
+  * PEP 357: '__index__' 方法
+
+  * 其他语言特性修改
+
+  * 新增，改进和删除的模块
+
+  * 构建和 C API 的变更
+
+  * 移植到Python 2.5
+
+  * 致谢
+
+* Python 2.4 有什么新变化
+
+  * PEP 218: 内置集合对象
+
+  * PEP 237: 统一长整数和整数
+
+  * PEP 289: 生成器表达式
+
+  * PEP 292: 更简单的字符串替换
+
+  * PEP 318: 函数和方法的装饰器
+
+  * PEP 322: 反向迭代
+
+  * PEP 324: 新的子进程模块
+
+  * PEP 327: 十进制数据类型
+
+  * PEP 328: 多行导入
+
+  * PEP 331: 与区域设置无关的浮点数/字符串转换
+
+  * 其他语言特性修改
+
+  * 新增，改进和弃用的模块
+
+  * 构建和 C API 的改变
+
+  * 移植到 Python 2.4
+
+  * 致谢
+
+* Python 2.3 有什么新变化
+
+  * PEP 218: 标准集合数据类型
+
+  * PEP 255: 简单的生成器
+
+  * PEP 263: 源代码的字符编码格式
+
+  * PEP 273: 从ZIP压缩包导入模块
+
+  * PEP 277: 针对 Windows NT 的 Unicode 文件名支持
+
+  * PEP 278: 通用换行支持
+
+  * PEP 279: enumerate()
+
+  * PEP 282: logging 包
+
+  * PEP 285: 布尔类型
+
+  * PEP 293: 编解码器错误处理回调
+
+  * PEP 301: Distutils的软件包索引和元数据
+
+  * PEP 302: 新导入钩子
+
+  * PEP 305: 逗号分隔文件
+
+  * PEP 307：对 pickle 的改进
+
+  * 扩展切片
+
+  * 其他语言特性修改
+
+  * 新增，改进和弃用的模块
+
+  * Pymalloc：一种专用对象分配器
+
+  * 构建和 C API 的改变
+
+  * 其他的改变和修正
+
+  * 移植到 Python 2.3
+
+  * 致谢
+
+* Python 2.2 有什么新变化
+
+  * 概述
+
+  * PEP 252 和 253：类型和类的修改
+
+  * PEP 234: 迭代器
+
+  * PEP 255: 简单的生成器
+
+  * PEP 237: 统一长整数和整数
+
+  * PEP 238：修改除法运算符
+
+  * Unicode 的改变
+
+  * PEP 227: 嵌套的作用域
+
+  * 新增和改进的模块
+
+  * 解释器的改变和修正
+
+  * 其他的改变和修正
+
+  * 致谢
+
+* Python 2.1 有什么新变化
+
+  * 概述
+
+  * PEP 227: 嵌套的作用域
+
+  * PEP 236: __future__ 指令
+
+  * PEP 207: 富比较
+
+  * PEP 230: 警告框架
+
+  * PEP 229: 新的构建系统
+
+  * PEP 205: 弱引用
+
+  * PEP 232: 函数属性
+
+  * PEP 235: 在大小写不敏感的平台上导入模块
+
+  * PEP 217: 交互模式显示钩子
+
+  * PEP 208: 新的强制转换模型
+
+  * PEP 241: Python 包中的元数据
+
+  * 新增和改进的模块
+
+  * 其他的改变和修正
+
+  * 致谢
+
+* Python 2.0 有什么新变化
+
+  * 概述
+
+  * Python 1.6 将会怎样？
+
+  * 新开发流程
+
+  * Unicode
+
+  * 列表推导式
+
+  * 增强赋值
+
+  * 字符串的方法
+
+  * 循环的垃圾回收
+
+  * 其他核心变化
+
+  * 移植 Python 2.0
+
+  * 扩展/嵌入更改
+
+  * Distutils：使模块易于安装
+
+  * XML 模块
+
+  * 模块更改
+
+  * 新增模块
+
+  * IDLE 改进
+
+  * 删除和弃用的模块
+
+  * 致谢
+
+这个“更新日志”是基于 Misc/NEWS.d 目录树内容的 file built 的 HTML 版本
+，它包含了对于当前 Python 版本的 *全部* 较重要更改。
+
+* 更新日志
+
+  * Python 下一版
+
+  * Python 3.14.7 final
+
+  * Python 3.14.6 final
+
+  * Python 3.14.5 final
+
+  * Python 3.14.5 发布候选版 1
+
+  * Python 3.14.4 正式版
+
+  * Python 3.14.3 正式版
+
+  * Python 3.14.2 正式版
+
+  * Python 3.14.1 正式版
+
+  * Python 3.14.0 正式版
+
+  * Python 3.14.0 release candidate 3
+
+  * Python 3.14.0 release candidate 2
+
+  * Python 3.14.0 rc1
+
+  * Python 3.14.0 beta 4
+
+  * Python 3.14.0 beta 3
+
+  * Python 3.14.0 beta 2
+
+  * Python 3.14.0 beta 1
+
+  * Python 3.14.0 alpha 7
+
+  * Python 3.14.0 alpha 6
+
+  * Python 3.14.0 alpha 5
+
+  * Python 3.14.0 alpha 4
+
+  * Python 3.14.0 alpha 3
+
+  * Python 3.14.0 alpha 2
+
+  * Python 3.14.0 alpha 1
+
+  * Python 3.13.0 beta 1
+
+  * Python 3.13.0 alpha 6
+
+  * Python 3.13.0 alpha 5
+
+  * Python 3.13.0 alpha 4
+
+  * Python 3.13.0 alpha 3
+
+  * Python 3.13.0 alpha 2
+
+  * Python 3.13.0 alpha 1
+
+  * Python 3.12.0 beta 1
+
+  * Python 3.12.0 alpha 7
+
+  * Python 3.12.0 alpha 6
+
+  * Python 3.12.0 alpha 5
+
+  * Python 3.12.0 alpha 4
+
+  * Python 3.12.0 alpha 3
+
+  * Python 3.12.0 alpha 2
+
+  * Python 3.12.0 alpha 1
+
+  * Python 3.11.0 beta 1
+
+  * Python 3.11.0 alpha 7
+
+  * Python 3.11.0 alpha 6
+
+  * Python 3.11.0 第 5 个 alpha 版本
+
+  * Python 3.11.0 alpha 4
+
+  * Python 3.11.0 alpha 3
+
+  * Python 3.11.0 alpha 2
+
+  * Python 3.11.0 alpha 1
+
+  * Python 3.10.0 beta 1
+
+  * Python 3.10.0 alpha 7
+
+  * Python 3.10.0 alpha 6
+
+  * Python 3.10.0 alpha 5
+
+  * Python 3.10.0 alpha 4
+
+  * Python 3.10.0 alpha 3
+
+  * Python 3.10.0 alpha 2
+
+  * Python 3.10.0 alpha 1
+
+  * Python 3.9.0 beta 1
+
+  * Python 3.9.0 alpha 6
+
+  * Python 3.9.0 alpha 5
+
+  * Python 3.9.0 alpha 4
+
+  * Python 3.9.0 alpha 3
+
+  * Python 3.9.0 alpha 2
+
+  * Python 3.9.0 alpha 1
+
+  * Python 3.8.0 beta 1
+
+  * Python 3.8.0 alpha 4
+
+  * Python 3.8.0 alpha 3
+
+  * Python 3.8.0 alpha 2
+
+  * Python 3.8.0 alpha 1
+
+  * Python 3.7.0 正式版
+
+  * Python 3.7.0 rc1
+
+  * Python 3.7.0 beta 5
+
+  * Python 3.7.0 beta 4
+
+  * Python 3.7.0 beta 3
+
+  * Python 3.7.0 beta 2
+
+  * Python 3.7.0 beta 1
+
+  * Python 3.7.0 alpha 4
+
+  * Python 3.7.0 alpha 3
+
+  * Python 3.7.0 alpha 2
+
+  * Python 3.7.0 alpha 1
+
+  * Python 3.6.6 正式版
+
+  * Python 3.6.6 rc1
+
+  * Python 3.6.5 正式版
+
+  * Python 3.6.5 rc1
+
+  * Python 3.6.4 正式版
+
+  * Python 3.6.4 rc1
+
+  * Python 3.6.3 正式版
+
+  * Python 3.6.3 rc1
+
+  * Python 3.6.2 正式版
+
+  * Python 3.6.2 rc2
+
+  * Python 3.6.2 rc1
+
+  * Python 3.6.1 正式版
+
+  * Python 3.6.1 rc1
+
+  * Python 3.6.0 正式版
+
+  * Python 3.6.0 rc2
+
+  * Python 3.6.0 rc1
+
+  * Python 3.6.0 beta 4
+
+  * Python 3.6.0 beta 3
+
+  * Python 3.6.0 beta 2
+
+  * Python 3.6.0 beta 1
+
+  * Python 3.6.0 alpha 4
+
+  * Python 3.6.0 alpha 3
+
+  * Python 3.6.0 alpha 2
+
+  * Python 3.6.0 alpha 1
+
+  * Python 3.5.5 正式版
+
+  * Python 3.5.5 rc1
+
+  * Python 3.5.4 正式版
+
+  * Python 3.5.4 rc1
+
+  * Python 3.5.3 正式版
+
+  * Python 3.5.3 rc1
+
+  * Python 3.5.2 正式版
+
+  * Python 3.5.2 rc1
+
+  * Python 3.5.1 正式版
+
+  * Python 3.5.1 rc1
+
+  * Python 3.5.0 正式版
+
+  * Python 3.5.0 rc4
+
+  * Python 3.5.0 rc3
+
+  * Python 3.5.0 rc2
+
+  * Python 3.5.0 rc1
+
+  * Python 3.5.0 beta 4
+
+  * Python 3.5.0 beta 3
+
+  * Python 3.5.0 beta 2
+
+  * Python 3.5.0 beta 1
+
+  * Python 3.5.0 alpha 4
+
+  * Python 3.5.0 alpha 3
+
+  * Python 3.5.0 alpha 2
+
+  * Python 3.5.0 alpha 1

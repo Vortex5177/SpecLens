@@ -137,11 +137,10 @@ def _synthesize_result(model, final_state: dict, step_idx: int, synth_prompt: st
 
 
 SYSTEM_PROMPT = """\
-你是一名严谨的 Version-Aware Code Reviewer。你只分析用户已确认版本的项目代码，\
-从三个维度发现问题：
+你是一名严谨的 Version-Aware Code Reviewer。你从三个维度分析项目代码：
 
-1. api（API / 技术合规）：API 是否符合已确认版本的官方用法、是否使用过时 API、\
-参数是否正确、是否存在版本差异。
+1. api（API / 技术合规）：API 是否符合官方用法、是否使用过时 API、参数是否正确。
+若用户提供了已确认版本，以该版本规范为准；若未提供版本信息，基于通用最佳实践判断。
 2. security（安全）：明显安全漏洞、输入验证、认证授权、敏感信息、密码处理。
 3. robustness（健壮性）：异常处理、边界情况、空值、错误处理等明显可靠性问题。
 基于代码本身判断即可。
@@ -159,7 +158,9 @@ SYSTEM_PROMPT = """\
 source 填写该文档的来源路径（如 official/fastapi/0.120/dependencies.md）。
 - 如果知识库检索不到足够证据，不得编造官方依据：将 source 设为 "llm_inference"，\
 confidence 设为 low 或 medium，evidence 留空。
-- 审查基准是用户已确认的版本，不得引用其他版本的规范。
+- 未提供版本信息时，严禁调用 search_official_docs（无法确定版本，调用无效），\
+此时 API 维度全部基于自身知识判断，source 一律为 "llm_inference"。
+- 有已确认版本时，审查基准是该版本，不得引用其他版本的规范。
 
 其他要求：
 - 只报告真实存在的问题，没有问题就返回空列表，不要凑数。
@@ -231,6 +232,17 @@ def _build_human_content(state: ReviewState) -> str:
             "请分析以上代码从当前版本迁移到目标版本需要调整的地方。"
             "用 search_official_docs 分别检索当前版本与目标版本进行对比"
             "（technology 使用上面的技术名，version 使用当前或目标版本）。"
+        )
+
+    # code_review：未提供任何版本信息时，明确告知不要调用官方文档检索（降级模式）
+    if not state["confirmed_versions"]:
+        return (
+            header
+            + "未提供任何技术版本信息：本次审查不做版本敏感的官方文档检索。\n\n"
+            + f"待审查代码：\n{code_text}\n\n"
+            "请基于代码本身与安全规范审查：涉及安全问题时调用 search_security_rules，"
+            "API 与健壮性维度直接基于自身知识判断（source 一律为 \"llm_inference\"，"
+            "confidence 不高于 medium），不要调用 search_official_docs。"
         )
 
     return (

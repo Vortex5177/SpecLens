@@ -157,6 +157,114 @@ def ingest_document(file_path: Path, metadata: dict) -> int:
     return len(documents)
 
 
+def _chunk_counts_by_source() -> dict[str, int]:
+    """从 Qdrant 统计每个知识文件的已入库分块数（source -> chunks）。
+
+    Qdrant 不可用时返回空 dict（目录清单仍可展示，只是不显示入库状态）。
+    """
+    counts: dict[str, int] = {}
+    try:
+        client = get_qdrant_client()
+        for collection in (config.QDRANT_COLLECTION, config.QDRANT_SECURITY_COLLECTION):
+            if not client.collection_exists(collection):
+                continue
+            offset = None
+            while True:
+                points, offset = client.scroll(
+                    collection_name=collection,
+                    limit=256,
+                    offset=offset,
+                    with_payload=["metadata.source"],
+                    with_vectors=False,
+                )
+                for point in points:
+                    source = (point.payload or {}).get("metadata", {}).get("source")
+                    if source:
+                        counts[source] = counts.get(source, 0) + 1
+                if offset is None:
+                    break
+    except Exception as e:
+        print(f"[ingestion] Qdrant 统计失败（忽略）：{type(e).__name__}: {e}", flush=True)
+    return counts
+
+
+def delete_document_vectors(source: str, source_type: str) -> int:
+    """按 metadata.source 精确删除 Qdrant 中某个知识文件的全部分块，返回删除数。
+
+    与入库时的 source 命名一致（如 official/fastapi/0.120/x.md 或 security/x.md）。
+    Qdrant 不可用或 collection 不存在时返回 0（文件已删，向量残留不影响检索正确性）。
+    """
+    collection = (
+        config.QDRANT_COLLECTION if source_type == "official" else config.QDRANT_SECURITY_COLLECTION
+    )
+    try:
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
+
+        client = get_qdrant_client()
+        if not client.collection_exists(collection):
+            return 0
+        source_filter = Filter(
+            must=[FieldCondition(key="metadata.source", match=MatchValue(value=source))]
+        )
+        removed = client.count(
+            collection_name=collection, count_filter=source_filter, exact=True
+        ).count
+        if removed:
+            client.delete(collection_name=collection, points_selector=source_filter)
+        return removed
+    except Exception as e:
+        print(f"[ingestion] 删除向量失败（忽略）：{type(e).__name__}: {e}", flush=True)
+        return 0
+
+
+def catalog_knowledge() -> dict:
+    """返回本地已有规范文档清单（官方文档按 技术/版本 分组 + 安全规范平铺）。
+
+    每个文档附带已入库分块数：0 或 null 表示尚未入库/无法统计。
+    """
+    counts = _chunk_counts_by_source()
+
+    def _doc_entry(file_path: Path) -> dict:
+        source = file_path.relative_to(config.KNOWLEDGE_DIR).as_posix()
+        return {
+            "file": file_path.name,
+            "topic": file_path.stem,
+            "chunks": counts.get(source),
+        }
+
+    official_tree = []
+    official = config.KNOWLEDGE_DIR / "official"
+    if official.is_dir():
+        for tech_dir in sorted(p for p in official.iterdir() if p.is_dir()):
+            versions = []
+            for version_dir in sorted(p for p in tech_dir.iterdir() if p.is_dir()):
+                documents = [
+                    _doc_entry(f)
+                    for f in sorted(version_dir.rglob("*"))
+                    if f.is_file() and f.suffix.lower() in config.KNOWLEDGE_EXTENSIONS
+                ]
+                if documents:
+                    versions.append({"version": version_dir.name, "documents": documents})
+            if versions:
+                official_tree.append({"technology": tech_dir.name, "versions": versions})
+
+    security_documents = []
+    security = config.KNOWLEDGE_DIR / "security"
+    if security.is_dir():
+        security_documents = [
+            _doc_entry(f)
+            for f in sorted(security.rglob("*"))
+            if f.is_file() and f.suffix.lower() in config.KNOWLEDGE_EXTENSIONS
+        ]
+
+    return {
+        "official": official_tree,
+        "security": security_documents,
+        "total_files": sum(len(v["documents"]) for t in official_tree for v in t["versions"])
+        + len(security_documents),
+    }
+
+
 def ingest_knowledge() -> dict:
     """执行一次全量入库（官方文档 + 安全规范），返回统计信息。"""
     official_docs = _collect_official_documents()

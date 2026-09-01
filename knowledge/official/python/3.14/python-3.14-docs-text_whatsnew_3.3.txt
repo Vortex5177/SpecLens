@@ -1,0 +1,2259 @@
+Python 3.3 有什么新变化
+***********************
+
+本文介绍了 Python 3.3 相比 3.2 的新增特性。 Python 3.3 于 2012 年 9 月
+29 日 发布。 有关完整详细信息，请参见 changelog。
+
+参见: **PEP 398** - Python 3.3 发布计划
+
+
+摘要 -- 发布重点
+================
+
+新的语法特性：
+
+* 新增 "yield from" 表达式用于 生成器委托。
+
+* "u'unicode'" 语法重新被接受用于 "str" 对象。
+
+新的库模块：
+
+* "faulthandler" (帮助调试低层级的崩溃)
+
+* "ipaddress" (代表 IP 地址和掩码的高层级对象)
+
+* "lzma" (使用 XZ / LZMA 算法压缩数据)
+
+* "unittest.mock" (使用模拟对象替换你的受测试系统中的某些部分)
+
+* "venv" (Python 虚拟环境，类似于流行的 "virtualenv" 包)
+
+新的内置特性：
+
+* 重写 I/O 异常的层次结构.
+
+实现的改进：
+
+* 基于 "importlib" 重写 import machinery。
+
+* 更紧凑的 Unicode 字符串。
+
+* 更紧凑的 属性字典。
+
+显著改进的库模块：
+
+* 针对 decimal 模块的 C 加速器。
+
+* email 模块中更好的 Unicode 处理 (*暂定*)。
+
+安全改进：
+
+* 哈希随机化被默认启用。
+
+请继续阅读有关面向用户的改变的详细清单。
+
+
+PEP 405: 虚拟环境
+=================
+
+虚拟环境有助于创建 独立的 Python 设置，同时共享全系统的基础安装，便于
+维护。  虚拟环境有自己的私有站点包（即本地安装的库），并可选择与系统范
+围的站点包分离。  虚拟环境的概念和实现 受到流行的 "virtualenv" 第三方
+包 的启发，但受益于与解释器核心更紧密的集成。
+
+本 PEP 添加了 "venv" 模块用于编程访问，以及 "pyvenv" 脚本用于命令行访
+问和管理。 Python 解释器会检查 "pyvenv.cfg"，文件的存在标志着虚拟环境
+目录树的基础。
+
+参见:
+
+  **PEP 405** - Python虚拟环境
+     PEP 由 Carl Meyer 撰写 ; 由 Carl Meyer 和 Vinay Sajip 实现。
+
+
+PEP 420: 隐式命名空间包
+=======================
+
+原生支持不要求 "__init__.py" 标记文件和可以自动跨越多个路径节的包目录
+（灵感来自多个命名空间包的第三方方案，如 **PEP 420** 中所述）
+
+参见:
+
+  **PEP 420** - 隐式命名空间包
+     PEP 由 Eric V. Smith 撰写，由 Eric V. Smith 和 Barry Warsaw 实现
+
+
+PEP 3118: 新的内存视图实现和缓冲协议文档
+========================================
+
+**PEP 3118** 的实现已获得大幅改进。
+
+新的 memoryview 实现全面修复了 Py_buffer 结构体中曾导致多起崩溃报告的
+动态分配字段的所有权和生命周期问题。 此外，还修复了多个函数在非连续或
+多维输入时崩溃或返回不正确结果的问题。
+
+现在 memoryview 对象具有符合 PEP-3118 标准的 getbufferproc()，可以检查
+使用者的请求类型。 新增了许多新的特性，其中的大部分已适用于非连续数组
+和带有子偏移量的数组。
+
+文档已进行更新，清楚地列出了导出方和使用方的责任。 缓冲区请求旗标被划
+分为基本旗标和复合旗标。 对非连续和多维的 NumPy 风格数组的内存布局进行
+了说明。
+
+
+相关特性
+--------
+
+* 现在 struct 模块语法中所有原生单字符格式指示符（可以选择添加 '@' 前
+  缀）均受到支持。
+
+* 在某些限制条件下，cast() 方法允许改变 C 连续数组的格式和形状。
+
+* 任何数组类型都支持多维列表的表示形式。
+
+* 任何数组类型都支持多维比较操作。
+
+* 格式为 B、b 或 c 的可哈希（只读）类型的一维 memoryview 现在将是可哈
+  希的。 （由 Antoine Pitrou 在 bpo-13411 中贡献。）
+
+* 支持对 1 维数据类型的任意切片。 例如，现在可以通过使用负步长值以
+  *O*(1) 复杂度对 memoryview 进行翻转。
+
+
+API 的变化
+----------
+
+* 官方的最大维度数量限制已更改为 64。
+
+* 空形状、区间和子偏移量的表示形式现在是空元组而不是 "None"。
+
+* 现在对格式为 'B' (无符号字节型) 的 memoryview 元素的访问将返回一个整
+  数（遵循结构体模块语法）。 要返回字节串对象则必须先将视图强制转换为
+  'c'。
+
+* 现在 memoryview 比较将使用操作数的逻辑结构并会按值来比较所有数组元素
+  。 结构体模块语法中的所有格式化字符串均受到支持。 带有不可识别的格式
+  化字符串的视图仍然被允许，但无论视图内容如何比较结果总是不相等。
+
+* 更多改变请参阅 Build and C API Changes 和 Porting C code。
+
+（由 Stefan Krah 在 bpo-10181 中贡献。）
+
+参见: **PEP 3118** - 修改缓冲区协议
+
+
+PEP 393: 灵活的字符串表示
+=========================
+
+Unicode字符串类型已改为支持多种内部表示法，具体取决于所表示的字符串中
+具有最大 Unicode 序号（1、2 或 4 字节）的字符 。  这样，在常见情况下可
+以节省空间，但在所有系统上都能使用完整的 UCS-4。  对于使用现有应用程序
+接口的兼容性 来说，可能会并行存在几种表示法；随着时间的推移，这种兼容
+性 应逐步淘汰。
+
+在 Python 一方，此项改变应当没有任何缺点。
+
+在 C API 方面，**PEP 393** 完全向下兼容。 旧的 API 至少还能使用五年。
+使用传统 API 的应用程序不会完全受益于内存的减少，或者更糟的是，可能会
+使用更多的内存，因为 Python 可能需要维护每个字符串的两个版本（传统格式
+和新的高效存储）。
+
+
+功能
+----
+
+由 **PEP 393** 引入的改变如下:
+
+* Python 现在始终支持全部 Unicode 码位，包括非 BMP 码位 (即从 "U+0000"
+  到 "U+10FFFF")。 窄编译版本和宽编译版本之间的区别已不复存在，Python
+  现在的行为就像宽编译版本，甚至在 Windows 下也是如此。
+
+* 随着窄编译版本的消亡，窄编译版本特有的问题也得到了解决，例如：
+
+  * 现在 "len()" 对于非 BMP 字符总是返回 1，因此 "len('\U0010FFFF') ==
+    1"；
+
+  * 替换对不会在字符串字面值中重新合并，因此 "'\uDBFF\uDFFF' !=
+    '\U0010FFFF'"；
+
+  * 索引或切分非 BMP 字符会返回预期的值，因此 "'\U0010FFFF'[0]" 现在会
+    返回 "'\U0010FFFF'" 而不是 "'\uDBFF'"；
+
+  * 标准库中的所有其他函数现在都能正确处理非 BMP 代码点。
+
+* "sys.maxunicode" 的值现在总是 "1114111" (十六进制为 "0x10FFFF")。
+  "PyUnicode_GetMax()" 函数仍返回 "0xFFFF" 或 "0x10FFFF" 以便向下兼容
+  ，但不应与新的 Unicode API 一起使用 (参见 bpo-13054)。
+
+* "./configure" 标志 "--with-wide-unicode" 已被移除。
+
+
+性能和资源使用情况
+------------------
+
+现在，Unicode 字符串的存储取决于字符串中的最高码位：
+
+* 纯 ASCII 和 Latin1 字符串 ("U+0000-U+00FF") 每个码位使用 1 个字节；
+
+* BMP 字符串 ("U+0000-U+FFFF") 每个码位使用 2 个字节；
+
+* 非 BMP 字符串 ("U+10000-U+10FFFF") 每个码位使用 4 个字节。
+
+这样做的效果是，对于大多数应用而言，字符串存储的内存使用量应该会大幅减
+少 —— 尤其是与以前的宽 unicode 版本相比 —— 因为在许多情况下，即使在国
+际环境中，字符串也将是纯 ASCII 格式（因为许多字符串存储的是非人类语言
+数据，如 XML 片段、HTTP 标头、JSON 编码数据等）。 出于同样的原因，我们
+还希望它能提高非小应用程序的 CPU 缓存效率。 在 Django 基准测试中，
+Python 3.3 的内存使用量比 Python 3.2 少两到三倍，比 Python 2.7 略好一
+些（详情请参见 PEP）。
+
+参见:
+
+  **PEP 393** - 灵活的字符串表示
+     PEP 由 Martin von Löwis 撰写 ; 由 Torsten Becker 和 Martin von
+     Löwis 实现。
+
+
+PEP 397: 适用于Windows的Python启动器
+====================================
+
+Python 3.3 的 Windows 安装程序现在包含一个 "py" 启动程序，可用于以版本
+无关的方式启动 Python 应用程序。
+
+双击 "*.py" 文件时会隐式调用该启动器。 如果系统中只安装了一个 Python
+版本，则将使用该版本运行文件。 如果安装了多个版本，则默认使用最新版本
+，但也可以通过在 Python 脚本中加入 Unix 风格的“shebang 行”来覆盖该版本
+。
+
+启动器也可以作为 "py" 应用程序在命令行中显式使用。运行 "py" 遵循与隐式
+启动脚本相同的版本选择规则，但可以通过传递适当的参数来选择更具体的版本
+（例如，当 Python 2 也已安装时，使用 "-3" 来请求 Python 3；当安装了较
+新的 Python 版本时，使用 "-2.6" 来特别请求较早的 Python 版本）。
+
+除了启动器之外，Windows 安装程序现在还包含一个选项，可将新安装的
+Python 添加到系统 PATH 中。 （由 Brian Curtin 在 bpo-3561 中贡献）。
+
+参见:
+
+  **PEP 397** - 适用于Windows的Python启动器
+     PEP 由 Mark Hammond 和 Martin v. Löwis 撰写 ; 由 Vinay Sajip实现
+     。
+
+  启动器文档: Python 安装管理器
+
+  安装器 PATH 修改: Python 安装管理器
+
+
+PEP 3151: 重写 OS 和 IO 异常的层次结构
+======================================
+
+现在，由操作系统错误引发的异常层次结构既得到了简化，又更加精细。
+
+你不必再为在 "OSError", "IOError", "EnvironmentError", "WindowsError",
+"mmap.error", "socket.error" 或 "select.error" 之间选择合适的异常类型
+而烦恼。 所有这些异常类型现在只有一个: "OSError"。 出于兼容性考虑其他
+名称将作为别名保留。
+
+此外，现在捕捉特定错误条件也更容易了。无需从 "errno" 模块中检查
+"errno" 属性（或 "args[0]" ）中的特定常量，你可以捕捉适当的 "OSError"
+子类。可用的子类如下：
+
+* "BlockingIOError"
+
+* "ChildProcessError"
+
+* "ConnectionError"
+
+* "FileExistsError"
+
+* "FileNotFoundError"
+
+* "InterruptedError"
+
+* "IsADirectoryError"
+
+* "NotADirectoryError"
+
+* "PermissionError"
+
+* "ProcessLookupError"
+
+* "TimeoutError"
+
+并且 "ConnectionError" 本身具有细粒度的子类:
+
+* "BrokenPipeError"
+
+* "ConnectionAbortedError"
+
+* "ConnectionRefusedError"
+
+* "ConnectionResetError"
+
+有了新的异常，现在就可以避免 "errno" 的常见用法了。 例如，下面是为
+Python 3.2 编写的代码：
+
+   from errno import ENOENT, EACCES, EPERM
+
+   try:
+       with open("document.txt") as f:
+           content = f.read()
+   except IOError as err:
+       if err.errno == ENOENT:
+           print("document.txt file is missing")
+       elif err.errno in (EACCES, EPERM):
+           print("You are not allowed to read document.txt")
+       else:
+           raise
+
+现在无需导入 "errno"，也无需手动检查异常属性：
+
+   try:
+       with open("document.txt") as f:
+           content = f.read()
+   except FileNotFoundError:
+       print("document.txt file is missing")
+   except PermissionError:
+       print("You are not allowed to read document.txt")
+
+参见:
+
+  **PEP 3151** - 重写 OS 和 IO 异常的层次结构
+     PEP 由 Antoine Pitrou 撰写并实现
+
+
+PEP 380: 委托给子生成器的语法
+=============================
+
+PEP 380 增加了 "yield from" 表达式，允许 *generator* 将其部分操作委托
+给另一个生成器。 这样，包含 "yield" 的代码部分就可以被分解出来，放在另
+一个生成器中。 此外，还允许子生成器返回一个值，并将该值提供给委托生成
+器。
+
+虽然 "yield from" 表达式主要用于委托给子生成器，但它实际上允许委托给任
+意子生成器。
+
+对于简单的迭代器而言，"yield from iterable" 本质上只是 "for item in
+iterable: yield item" 的简写形式：
+
+   >>> def g(x):
+   ...     yield from range(x, 0, -1)
+   ...     yield from range(x)
+   ...
+   >>> list(g(5))
+   [5, 4, 3, 2, 1, 0, 1, 2, 3, 4]
+
+但是，与普通的循环不同，"yield from" 允许子生成器直接从调用方作用域获
+取、发送和抛出值，并向外层生成器返回一个最终值:
+
+   >>> def accumulate():
+   ...     tally = 0
+   ...     while 1:
+   ...         next = yield
+   ...         if next is None:
+   ...             return tally
+   ...         tally += next
+   ...
+   >>> def gather_tallies(tallies):
+   ...     while 1:
+   ...         tally = yield from accumulate()
+   ...         tallies.append(tally)
+   ...
+   >>> tallies = []
+   >>> acc = gather_tallies(tallies)
+   >>> next(acc)  # 确保累计器准备好接受值
+   >>> for i in range(4):
+   ...     acc.send(i)
+   ...
+   >>> acc.send(None)  # 完成第一次记录
+   >>> for i in range(5):
+   ...     acc.send(i)
+   ...
+   >>> acc.send(None)  # 完成第二次记录
+   >>> tallies
+   [6, 10]
+
+推动这项改变的主要原则是允许即便被设计用来配合 "send" 和 "throw" 方法
+使用的生成器也能像一个大函数能拆分成多个子函数那样容易地拆分为多个子生
+成器。
+
+参见:
+
+  **PEP 380** - 委托给子生成器的语法
+     PEP 由 Greg Ewing 撰写，由 Greg Ewing 实现。由 Renaud Blanch，
+     Ryan Kelly 和 Nick Coghlan 集成到3.3，由 Zbigniew Jędrzejewski-
+     Szmek 和 Nick Coghlan 编写文档
+
+
+PEP 409: 清除异常上下文
+=======================
+
+PEP 409 引入了允许禁用串连的异常上下文显示的新语法。 这允许在不同异常
+类型间进行转换的应用程序具有更清晰的错误消息:
+
+   >>> class D:
+   ...     def __init__(self, extra):
+   ...         self._extra_attributes = extra
+   ...     def __getattr__(self, attr):
+   ...         try:
+   ...             return self._extra_attributes[attr]
+   ...         except KeyError:
+   ...             raise AttributeError(attr) from None
+   ...
+   >>> D({}).x
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "<stdin>", line 8, in __getattr__
+   AttributeError: x
+
+如果后面没有 "from None" 来屏蔽异常原因，则默认原始异常将被显示:
+
+   >>> class C:
+   ...     def __init__(self, extra):
+   ...         self._extra_attributes = extra
+   ...     def __getattr__(self, attr):
+   ...         try:
+   ...             return self._extra_attributes[attr]
+   ...         except KeyError:
+   ...             raise AttributeError(attr)
+   ...
+   >>> C({}).x
+   Traceback (most recent call last):
+     File "<stdin>", line 6, in __getattr__
+   KeyError: 'x'
+
+   During handling of the above exception, another exception occurred:
+
+   Traceback (most recent call last):
+     File "<stdin>", line 1, in <module>
+     File "<stdin>", line 8, in __getattr__
+   AttributeError: x
+
+调试功能并未丢失，因为原始异常上下文在需要时仍然可用（举例来说，如果某
+个中间库不正确地抑制了有价值的下层细节）:
+
+   >>> try:
+   ...     D({}).x
+   ... except AttributeError as exc:
+   ...     print(repr(exc.__context__))
+   ...
+   KeyError('x',)
+
+参见:
+
+  **PEP 409** - 清除异常上下文
+     PEP 由 Ethan Furman 撰写 ，由 Ethan Furman 和 Nick Coghlan 实现。
+
+
+PEP 414: 显式的Unicode文本
+==========================
+
+为使从 Python 2 迁移重度使用 Unicode 字面值的 Unicode 自适应型 Python
+应用程序更为容易，Python 3.3 重新支持字符串字面值使用 ""u"" 前缀。 该
+前缀在 Python 3 中并无语法意义，提供它只是为了减少在迁移到 Python 3 时
+纯粹机械性的修改数量，让开发者能更轻松的关注更重要的语法变化（比如默认
+更严格的二进制和文本数据的区分）。
+
+参见:
+
+  **PEP 414** - 显式的Unicode文本
+     PEP 由 Armin Ronacher 撰写。
+
+
+PEP 3155: 类和函数的限定名称
+============================
+
+函数和类对象新增了 "__qualname__" 属性来表示从模块最高层级到其定义位置
+的“路径”。 对于全局函数和类，这将与 "__name__" 相同。 对于其他函数和类
+，它提供了有关这些对象实际定义所在位置，以及如何从全局作用域访问它们的
+更详细信息。
+
+包含（未绑定）方法的示例:
+
+   >>> class C:
+   ...     def meth(self):
+   ...         pass
+   ...
+   >>> C.meth.__name__
+   'meth'
+   >>> C.meth.__qualname__
+   'C.meth'
+
+包含嵌套类的示例:
+
+   >>> class C:
+   ...     class D:
+   ...         def meth(self):
+   ...             pass
+   ...
+   >>> C.D.__name__
+   'D'
+   >>> C.D.__qualname__
+   'C.D'
+   >>> C.D.meth.__name__
+   'meth'
+   >>> C.D.meth.__qualname__
+   'C.D.meth'
+
+包含嵌套函数的示例:
+
+   >>> def outer():
+   ...     def inner():
+   ...         pass
+   ...     return inner
+   ...
+   >>> outer().__name__
+   'inner'
+   >>> outer().__qualname__
+   'outer.<locals>.inner'
+
+这些对象的字符串表示形式也被修改以包括新的更准确的信息:
+
+   >>> str(C.D)
+   "<class '__main__.C.D'>"
+   >>> str(C.D.meth)
+   '<function C.D.meth at 0x7f46b9fe31e0>'
+
+参见:
+
+  **PEP 3155** - 类和函数的限定名称
+     PEP 由 Antoine Pitrou 撰写并实现。
+
+
+PEP 412: Key-Sharing Dictionary
+===============================
+
+用于存储对象属性的字典现在能够在彼此之间共享部分内部存储（比如说，存储
+键及其对应哈希值的部分）。 这减少了程序创建多个非内置类型实例的内存消
+耗。
+
+参见:
+
+  **PEP 412** - Key-Sharing Dictionary
+     PEP 由 Mark Shannon 撰写并实现。
+
+
+PEP 362: 函数签名对象
+=====================
+
+新增的函数 "inspect.signature()" 使得对 python 可调用对象的内省更为简
+单直观。 多种可调用对象均受到支持：不论是否带装饰器的 python 函数，类
+以及 "functools.partial()" 对象。 新增的类 "inspect.Signature",
+"inspect.Parameter" 和 "inspect.BoundArguments" 保存了有关调用签名的信
+息，如标注、默认值、形参类别和绑定参数等，这极大地简化了编写装饰器和其
+他任何验证或修改调用签名或参数的工作。
+
+参见:
+
+  **PEP 362**: -  函数签名对象
+     PEP 由 Brett Cannon，Yury Selivanov，Larry Hastings，Jiwon Seo 撰
+     写，由 Yury Selivanov 实现。
+
+
+PEP 421: 添加 sys.implementation
+================================
+
+新增的 "sys" 模块属性将对外公开当前运行的解释器实现的专属细节。
+"sys.implementation" 上的初始属性集合包括 "name", "version",
+"hexversion" 和 "cache_tag"。
+
+"sys.implementation" 的目的是将标准库所使用的具体实现专属数据合并到一
+个命名空间中。 这允许不同的 Python 实现能更方便地共享同一个标准库基准
+代码。 在其初始状态中，"sys.implementation" 只保持具体实现专属数据的一
+小部分。 随着时间推移这个比例将进行调整以使标准库具有更好的可移植性。
+
+标准库可移植性提高的一个例子是 "cache_tag"。 在 Python 3.3 中，
+"sys.implementation.cache_tag" 被 "importlib" 用来支持与 **PEP 3147**
+的一致性。 任何使用 "importlib" 来处理内置导入系统的 Python 实现都可使
+用 "cache_tag" 来控制各个模块的缓存行为。
+
+
+SimpleNamespace
+---------------
+
+"sys.implementation" 的实现还为 Python 引入了一个新类型:
+"types.SimpleNamespace"。 相比基于映射的命名空间像是 "dict"，
+"SimpleNamespace" 是基于属性的，像是 "object"。 不过，与 "object" 不同
+，"SimpleNamespace" 实例是可写的。 这意味着你可以通过常规的属性访问来
+添加、移除和修改命名空间。
+
+参见:
+
+  **PEP 421** - 添加 sys.implementation
+     PEP 由 Eric Snow 撰写并实现。
+
+
+使用 importlib 作为导入的实现
+=============================
+
+bpo-2377 - 以 importlib.__import__ 替代 __import__ bpo-13959 - 以纯
+Python 重新实现部分 "imp" bpo-14605 - 使导入机制成为显式的 bpo-14646 -
+要求加载器设置 __loader__ 和 __package__
+
+现在 "__import__()" 函数是由 "importlib.__import__()" 驱动的。 这项工
+作标志着 **PEP 302** 的“第 2 阶段”的结束。 这一变化带来了许多好处。 首
+先，它允许更多驱动导入的机制对外公开而不是保持隐式并藏在 C 代码内部。
+它还提供了单一的实现给所有支持 Python 3.3 的 Python VM 使用，有助于结
+束导入语义中有关特定 VM 的偏差。 最后它还减轻了导入的维护负担，以允许
+未来的更多改进。
+
+对于普通用户来说，语义上的变化应该是不可见的。 对于目前直接操纵 import
+或以程序方式调用 import 的代码来说，可能需要进行的代码修改将在本文档的
+Porting Python code 一节中阐述。
+
+
+新的API
+-------
+
+此项工作的一个好处是对外公开了实现 import 语句所涉及的机制。 这意味着
+过去保持隐式的各种导入器现在都作为 "importlib" 包的组成部分被完整暴露
+出来。
+
+在 "importlib.abc" 中定义的抽象基类已分别通过
+"importlib.abc.MetaPathFinder" 和 "importlib.abc.PathEntryFinder" 进行
+扩展以正确地描述 *元路径查找器* 和 *路径条目查找器*。 现在提供旧的 ABC
+"importlib.abc.Finder" 只是为了保持向下兼容性而没有包含任何方法要求。
+
+对于查找器，"importlib.machinery.FileFinder" 对外公开了用于查找一个模
+块的源代码和字节码文件的机制。 在之前版本中该类则是 "sys.path_hooks"
+的一个隐式成员。
+
+对于加载器，新的抽象基类 "importlib.abc.FileLoader" 可帮助编写使用文件
+系统作为模块代码的存储机制的加载器。 针对源代码的
+("importlib.machinery.SourceFileLoader"), 不带源代码的字节码文件的
+("importlib.machinery.SourcelessFileLoader") 以及扩展模块的
+("importlib.machinery.ExtensionFileLoader") 加载器现在均可被直接使用。
+
+现在 "ImportError" 具有 "name" 和 "path" 属性并会在有相关数据要提供时
+被设置。 针对导入失败的消息现在也会提供模块的完整名称而不是仅有模块名
+称的末尾部分。
+
+现在 "importlib.invalidate_caches()" 函数会调用缓存在
+"sys.path_importer_cache" 中的所有查找器上具有相同名称的方法以帮助根据
+需要清理任何已储存的状态。
+
+
+可见的改变
+----------
+
+对于可能需要修改的代码，请参阅 Porting Python code 一节。
+
+在 "importlib" 当前对外公开的范围之外，还有其他可见的针对 import 的改
+变。 最大的改变是 "sys.meta_path" 和 "sys.path_hooks" 现在将储存
+import 用到的所有元路径查找器和路径条目钩子。 在之前版本中这些查找器是
+隐式地藏在 import 的 C 代码内部而不是直接对外公开。 这意味着现在你可以
+方便地移除或修改各个查找器的顺序以适合你的需要。
+
+另一个变化是所有模块都具有 "__loader__" 属性，它储存被用于创建该模块的
+加载器。 **PEP 302** 已被更新以强制要求加载器实现该属性，因此未来的第
+3 方加载器一旦被更新人们将能确定该属性的存在。 但在此之前，import 都需
+要在加载之后设置模块。
+
+加载器现在还需要根据 **PEP 366** 设置 "__package__" 属性。 同样地，
+import 本身已经在所有来自 "importlib" 的加载器上设置了该属性并且
+import 是在加载之后自行设置该属性。
+
+现在当 "sys.path_hooks" 上未找到查找器时将把 "None" 插入到
+"sys.path_importer_cache" 中。 由于 "imp.NullImporter" 不是直接暴露在
+"sys.path_hooks" 上因此该值不再能够作为表示未找到查找器的可靠依据。
+
+有关语义变化的所有其他修改在为 Python 3.3 更新代码时都应当被纳入考虑，
+因此应当仔细阅读本文档的 Porting Python code 章节。
+
+（由 Brett Cannon 编写的实现）
+
+
+其他语言特性修改
+================
+
+对Python 语言核心进行的小改动：
+
+* 增加了对 Unicode 别名和具名序列的支持。 现在 "unicodedata.lookup()"
+  和 "'\N{...}'" 都能解析别名，而 "unicodedata.lookup()" 还能解析具名
+  序列。
+
+  （由 Ezio Melotti 在 bpo-12753 中贡献。）
+
+* Unicode 数据库更新至 UCD 版本 6.1.0
+
+* 现在 "range()" 对象的相等性比较将返回反映下层的由这些 range 对象生成
+  的序列的相等性的结果。 (bpo-13201)
+
+* 现在 "bytes" 和 "bytearray" 对象的 "count()", "find()", "rfind()",
+  "index()" 和 "rindex()" 方法将接受一个 0 到 255 范围内的整数作为其第
+  一个参数。
+
+  （由 Petri Lehtinen 在 bpo-12170 中贡献。）
+
+* 现在 "bytes" 和 "bytearray" 的 "rjust()", "ljust()" 和 "center()" 方
+  法将接受一个 "bytearray" 作为 "fill" 参数。 （由 Petri Lehtinen 在
+  bpo-12380 中贡献。）
+
+* 新增 "list" 和 "bytearray" 方法: "copy()" 和 "clear()" (bpo-10516)。
+  为此，"MutableSequence" 现在也定义了 "clear()" 方法 (bpo-11388)。
+
+* 原始字节串字面值现在可以写成 "rb"..."" 也可以写成 "br"...""。
+
+  （由 Antoine Pitrou 在 bpo-13748 中贡献。）
+
+* 现在 "dict.setdefault()" 对给定的键将只执行一次查找，这使其在配合内
+  置类型使用时是原子化的。
+
+  （由 Filip Gruszczyński 在 bpo-13521 中贡献。）
+
+* 当函数调用与函数签名不匹配时产生的错误消息已获得大幅改进。
+
+  （由 Benjamin Peterson 贡献。）
+
+
+更细粒度的导入锁
+================
+
+之前版本的 CPython 是始终依赖于全局导入锁的。 这会导致预料之外的困扰，
+比如当导入一个模块作为副作用触发代码在其他线程中执行导致的死锁。 有时
+需要应用一些笨拙的绕过方式，比如 "PyImport_ImportModuleNoBlock()" C
+API 函数。
+
+在 Python 3.3 中，导入一个模块会使用单独的模块级锁。 这能正确地从多个
+线程序列化给定模块的导入操作（防止出现被不完整初始化的模块），同时消除
+之前提到的困扰。
+
+（由 Antoine Pitrou 在 bpo-9260 中贡献。）
+
+
+内置函数和类型
+==============
+
+* "open()" 新增了 *opener* 形参：文件对象下层的文件描述符将随后通过调
+  用 *opener* 并附带 (*file*, *flags*) 来获取。 它可以被用来使用自定义
+  旗标例如 "os.O_CLOEXEC"。 增加了 "'x'" 模式：打开为独占创建，如果文
+  件已存在则打开失败。
+
+* "print()": 增加了 *flush* 关键字参数。 如果 *flush* 关键字参数为真值
+  ，流会被强制刷新。
+
+* "hash()": 默认将启用哈希随机化，参见 "object.__hash__()" 和
+  "PYTHONHASHSEED"。
+
+* "str" 类型新增了一个 "casefold()" 方法：返回字符串的大小写折叠副本，
+  大小写折叠形式的字符串可被用于不区分大小写的匹配。 例如，
+  "'ß'.casefold()" 将返回 "'ss'"。
+
+* 序列的文档已被大幅重写以更好地解释二进制/文本序列的区别并为各种内置
+  序列类型提供专属的文档章节 (bpo-4966)。
+
+
+新增模块
+========
+
+
+faulthandler
+------------
+
+新增的调试模块 "faulthandler" 包含用于在发生错误（如段错误之类的程序崩
+溃）、达到超时限制或收到用户信号时显式转储 Python 回溯的函数。 调用
+"faulthandler.enable()" 可安装针对 "SIGSEGV", "SIGFPE", "SIGABRT",
+"SIGBUS" 和 "SIGILL" 等信号的错误处理器。 你还可以在启动时通过设置
+"PYTHONFAULTHANDLER" 环境变量或使用 "-X" "faulthandler" 命令行选项来启
+用它们。
+
+Linux 上的段错误示例:
+
+   $ python -q -X faulthandler
+   >>> import ctypes
+   >>> ctypes.string_at(0)
+   Fatal Python error: Segmentation fault
+
+   Current thread 0x00007fb899f39700:
+     File "/home/python/cpython/Lib/ctypes/__init__.py", line 486 in string_at
+     File "<stdin>", line 1 in <module>
+   Segmentation fault
+
+
+ipaddress
+---------
+
+新的 "ipaddress" 模块提供了用于创建和操作代表 IPv4 和 IPv6 地址、网络
+和接口（即关联到特定 IP 子网的 IP 地址）的工具。
+
+（由 Google 和 Peter Moody 在 bpo-3144 中贡献。）
+
+
+lzma
+----
+
+新增的 "lzma" 模块提供了使用 LZMA 算法的数据压缩和解压，包括对 ".xz"
+和 ".lzma" 文件格式的支持。
+
+（由 Nadeem Vawda 和 Per Øyvind Karlsen 在 bpo-6715 中贡献。）
+
+
+改进的模块
+==========
+
+
+abc
+---
+
+改进了对包含以抽象方法组成的描述器的抽象基类的支持。 现在声明抽象描述
+器推荐方式是提供 "__isabstractmethod__" 作为动态更新的特征属性。 已对
+内置描述器进行了相应的更新。
+
+* "@abc.abstractproperty" has been deprecated, use "@property" with
+  "@abc.abstractmethod" instead.
+
+* "@abc.abstractclassmethod" has been deprecated, use "@classmethod"
+  with "@abc.abstractmethod" instead.
+
+* "@abc.abstractstaticmethod" has been deprecated, use "@staticmethod"
+  with "@abc.abstractmethod" instead.
+
+（由 Darren Dale 在 bpo-11610 中贡献。）
+
+现在 "abc.ABCMeta.register()" 将返回已注册的子类，这意味着它现在可被用
+作类装饰器 (bpo-10868)。
+
+
+array
+-----
+
+"array" 模块可使用 "q" 和 "Q" 类型码支持 long long 类型。
+
+（由 Oren Tirosh 和 Hirokazu Yamamoto 在 bpo-1172711 中贡献。）
+
+
+base64
+------
+
+现在 "base64" 现代接口的解码函数可接受仅包含 ASCII 字符的 Unicode 字符
+串。 例如，"base64.b64decode('YWJj')" 将返回 "b'abc'"。 （由 Catalin
+Iacob 在 bpo-13641 中贡献。）
+
+
+binascii
+--------
+
+除了它们通常接受的二进制对象，"a2b_" 现在还接受仅包含 ASCII 字符的字符
+串作为输入。 （由 Antoine Pitrou 在 bpo-13637 中贡献。）
+
+
+bz2
+---
+
+"bz2" 模块已被重新编写。 在此过程中，添加了一些新的特征:
+
+* 新的 "bz2.open()" 函数：以二进制或文本模式打开 bzip2 压缩文件。
+
+* "bz2.BZ2File" 现在可以读写任意文件型对象，具体方式是通过其构造器的
+  *fileobj* 参数。
+
+  （由 Nadeem Vawda 在 bpo-5863 中贡献。）
+
+* 现在 "bz2.BZ2File" 和 "bz2.decompress()" 能解压缩多流输入（比如由
+  **pbzip2** 工具所产生的输入）。 "bz2.BZ2File" 现在还可被用来创建这种
+  类型的文件，具体做法是使用 "'a'" (append) 模式。
+
+  （由 Nir Aides 在 bpo-1625 中贡献。）
+
+* 现在 "bz2.BZ2File" 实现了所有 "io.BufferedIOBase" API，但 "detach()"
+  和 "truncate()" 方法除外。
+
+
+编码器
+------
+
+"mbcs" 编解码器被重写以能够在所有 Windows 版本上正确处理 "replace" 和
+"ignore" 错误处理器。 "mbcs" 编解码器现在支持所有错误处理器，而不是仅
+支持将 "replace" 用于编码并将 "ignore" 用于解码。
+
+新增了一个 Windows 专属的编解码器: "cp65001" (bpo-13216)。 即 Windows
+代码页 65001 (Windows UTF-8, "CP_UTF8")。 举例来说，如果控制台输出代码
+页被设为 cp65001（例如使用 "chcp 65001" 命令）则 "sys.stdout" 就会使用
+它。
+
+多字节 CJK 解码器现在能更快地进行再同步。 它们将只忽略非法字节序列的第
+一个字节。 例如，现在 "b'\xff\n'.decode('gb2312', 'replace')" 将在替换
+字符后返回一个 "\n"。
+
+(bpo-12016)
+
+增量式 CJK 编解码器的编码器在每次调用其 encode() 方法时将不再重置。 例
+如:
+
+   >>> import codecs
+   >>> encoder = codecs.getincrementalencoder('hz')('strict')
+   >>> b''.join(encoder.encode(x) for x in '\u52ff\u65bd\u65bc\u4eba\u3002 Bye.')
+   b'~{NpJ)l6HK!#~} Bye.'
+
+对于旧版 Python 此示例将给出 "b'~{Np~}~{J)~}~{l6~}~{HK~}~{!#~} Bye.'"
+。
+
+(bpo-12100)
+
+"unicode_internal" 编解码器已被弃用。
+
+
+collections
+-----------
+
+新增了一个 "ChainMap" 类以允许将多个映射当作一个单元来处理。 （由
+Raymond Hettinger 针对 bpo-11089 编写，在 bpo-11297 中对外公开。）
+
+抽象基类已被移至新的 "collections.abc" 模块，以便更好地区分抽象和具体
+集合类。为了保留现有的导入，ABC 的别名仍然存在于 "collections" 模块中
+。(bpo-11085)
+
+"Counter" 类现在支持一元 "+" 和 "-" 运算符，以及就地运算符 "+="、"-="
+、"|=" 和 "&="。（由 Raymond Hettinger在 bpo-13121 中贡献。）
+
+
+contextlib
+----------
+
+"ExitStack" 现在为程序化操作上下文管理器及类似的清理功能提供了坚实的基
+础。与之前的 "contextlib.nested" API（已被弃用并移除）不同，新 API 设
+计为上下文管理器无论是在其 "__init__" 方法中获取资源（例如，文件对象）
+还是在 "__enter__" 方法中获取资源（例如，来自 "threading" 模块的同步对
+象）都能正确工作。
+
+(bpo-13585)
+
+
+crypt
+-----
+
+在 "crypt" 模块中添加了盐和模块化加密格式（哈希方法）以及 "mksalt()"
+函数。
+
+(bpo-10924)
+
+
+curses
+------
+
+* 如果 "curses" 模块是链接到 ncursesw 库，则当传入 Unicode 字符串或字
+  符时将使用 Unicode 函数 (例如 "waddwstr()")，否则使用字节函数 (例如
+  "waddstr()")。
+
+* 使用区域设置编码而不是 "utf-8" 来编码 Unicode 字符串。
+
+* "curses.window" 添加了新的 "curses.window.encoding" 属性。
+
+* "curses.window" 类有一个新的 "get_wch()" 方法用来获取一个宽字符。
+
+* "curses" 模块有一个新的 "unget_wch()" 函数用来推入一个宽字符以便下一
+  个 "get_wch()" 将返回它。
+
+（由 Iñigo Serna 在 bpo-6755 中贡献。）
+
+
+datetime
+--------
+
+* 简单型和感知型 "datetime" 实例间的相等比较现在会返回 "False" 而不是
+  引发 "TypeError" (bpo-15006)。
+
+* 新的 "datetime.datetime.timestamp()" 方法：返回与 "datetime" 实例对
+  应的 POSIX 时间戳。
+
+* "datetime.datetime.strftime()" 方法支持格式化早于 1000 年的年份。
+
+* "datetime.datetime.astimezone()" 方法现在可以不带参数调用，以将
+  datetime 实例转换为系统时区。
+
+
+decimal
+-------
+
+bpo-7652 - 集成了快速的本地十进制算术。
+   C模块和libmpdec由Stefan Krah编写。
+
+新版的C语言版 decimal 模块集成了高速libmpdec库，用于任意精度的正确四舍
+五入十进制浮点运算。libmpdec符合IBM的通用十进制算术规范。
+
+性能提升从数据库应用的10倍到数值密集型应用的100倍不等。这些数字是十进
+制浮点算术中标准精度预期提升的数值。由于精度是用户可配置的，确切数字可
+能会有所不同。例如，在整数大数算术中，差异可能会显著更高。
+
+下表只用于简单展示。 基准测试详情参见
+https://www.bytereef.org/mpdecimal/quickstart.html。
+
+   +-----------+---------------+----------------+---------------+
+   |           | decimal.py    | _decimal       | 加速          |
+   |===========|===============|================|===============|
+   | pi        | 42.02秒       | 0.345秒        | 120倍         |
+   +-----------+---------------+----------------+---------------+
+   | telco     | 172.19秒      | 5.68秒         | 30倍          |
+   +-----------+---------------+----------------+---------------+
+   | psycopg   | 3.57秒        | 0.29秒         | 12倍          |
+   +-----------+---------------+----------------+---------------+
+
+
+相关特性
+~~~~~~~~
+
+* "FloatOperation" 信号可选择启用针对混用 float 和 Decimal 时更严格的
+  语义限制。
+
+* 如果 Python 编译时不带线程，则 C 版本会自动禁用高资源开销的线程局部
+  上下文机制。 在此情况下，变量 "HAVE_THREADS" 将被设为 "False"。
+
+
+API 的变化
+~~~~~~~~~~
+
+* C模块上下文限制（如下表），具体取决于计算机体系结构：
+
+     +------------------------------+------------------+---------------------------+
+     |                              | 32位             | 64位                      |
+     |==============================|==================|===========================|
+     | "MAX_PREC"                   | "425000000"      | "999999999999999999"      |
+     +------------------------------+------------------+---------------------------+
+     | "MAX_EMAX"                   | "425000000"      | "999999999999999999"      |
+     +------------------------------+------------------+---------------------------+
+     | "MIN_EMIN"                   | "-425000000"     | "-999999999999999999"     |
+     +------------------------------+------------------+---------------------------+
+
+* 在上下文模板 ("DefaultContext", "BasicContext" 和 "ExtendedContext")
+  中 "Emax" 和 "Emin" 的数值被修改为 "999999"。
+
+* decimal.py中的 "Decimal" 构造函数不遵守上下文限制，并精确转换具有任
+  意指数或精度的值。由于C版本有内部限制，采用以下方案：如果可能，值将
+  精确转换，否则会引发 "InvalidOperation" 异常，结果为NaN。在后一种情
+  况下，总是可以使用 "create_decimal()" 来获得一个四舍五入或不精确的值
+  。
+
+* decimal.py中的幂函数总是正确四舍五入的。在C版本中，它是根据正确四舍
+  五入的 "exp()" 和 "ln()" 函数定义的，但最终结果只是“几乎总是正确四舍
+  五入”。
+
+* 在C版本中，包含信号的上下文字典是一个 "MutableMapping"。出于速度原因
+  ，"flags" 和 "traps" 始终引用与上下文初始化时相同的 "MutableMapping"
+  。如果分配了新的信号字典，"flags" 和 "traps" 会使用新值进行更新，但
+  不引用右侧的字典。
+
+* 对 "Context" 进行序列化会产生不同的输出，以便为 Python 和 C 版本提供
+  一个通用的交换格式。
+
+* "Context" 构造函数中的参数顺序已更改，以匹配 "repr()" 显示的顺序。
+
+* "quantize()" 方法的 "watchexp" 形参已被弃用。
+
+
+email
+-----
+
+
+策略框架
+~~~~~~~~
+
+电子邮件包现在有一个 "policy" 框架。"Policy" 是一个具有多个方法和属性
+的对象，用于控制电子邮件包的行为。Python 3.3 的主要策略是 "Compat32"
+策略，它提供了与 Python 3.2 中的电子邮件包的向后兼容性。可以在解析电子
+邮件消息时通过 "parser" 指定 "policy"，或在创建 "Message" 对象时指定，
+或在通过 "generator" 序列化电子邮件时指定。除非被覆盖，否则传递给
+"parser" 的策略将由该 "parser" 创建的所有 "Message" 对象和子对象继承。
+默认情况下，"generator" 将使用其序列化的 "Message" 对象的策略。默认策
+略是 "compat32"。
+
+所有 "policy" 对象实现的最小控制集是：
+
++-----------------+---------------------------------------------------------+
+| max_line_length | 当 "Message" 被序列化时，单个行的最大长度（不包括行分隔 |
+|                 | 符字符）。默认 为 78。                                  |
++-----------------+---------------------------------------------------------+
+| linesep         | 当 "Message" 被序列化时，用于分隔单个行的字符。默认为   |
+|                 | "\n"。                                                  |
++-----------------+---------------------------------------------------------+
+| cte_type        | "7bit" 或 "8bit"。"8bit" 仅适用于 "Bytes" "generator"， |
+|                 | 意味着在协议允 许的情况下（或原始输入中存在时）可以使用 |
+|                 | 非 ASCII 字符。                                         |
++-----------------+---------------------------------------------------------+
+| raise_on_defect | 导致一个 "parser" 在遇到缺陷时引发错误而不是将它们添加  |
+|                 | 到 "Message" 对 象的 "defects" 列表。                   |
++-----------------+---------------------------------------------------------+
+
+使用策略对象的 "clone()" 方法可以创建一个具有新设置的新策略实例。
+"clone" 方法接受上述任何控制作为关键字参数。在调用中未指定的任何控制将
+保留其默认值。因此，您可以创建一个使用 "\r\n" 行分隔符字符的策略，如下
+所示：
+
+   mypolicy = compat32.clone(linesep='\r\n')
+
+策略可用于简化生成符合应用程序所需格式的消息的过程。您不必在所有调用“
+生成器”的地方都记住指定 "linesep='\r\n'"，而可以在设置“解析器”或“消息”
+使用的策略时一次性指定，无论您的程序使用哪一个来创建“消息”对象。另一方
+面，如果需要生成多种格式的消息，您仍然可以在相应的“生成器”调用中指定参
+数。或者，您可以为不同情况创建自定义策略实例，并在创建“生成器”时传递这
+些实例。
+
+
+带有新头部API的暂行策略
+~~~~~~~~~~~~~~~~~~~~~~~
+
+尽管策略框架本身很有价值，但引入它的主要动机是允许创建新策略，这些策略
+以保持向后兼容性的方式为电子邮件包实现新功能，适用于那些不使用新策略的
+用户。由于新策略引入了新的 API，我们在 Python 3.3 中将其作为 *暂行策略
+* 发布。如果核心开发人员认为有必要，可能会发生向后不兼容的更改（包括代
+码的移除）。
+
+新策略是 "EmailPolicy" 的实例，并添加了以下附加控制：
+
++-----------------+---------------------------------------------------------+
+| refold_source   | 控制是否由 "parser" 解析的头部由 "generator" 重新折叠。 |
+|                 | 它可以设置为 "none"、"long" 或 "all"。默认值为 "long"， |
+|                 | 意味着源头部中长度超过 "max_line_length" 的行将被重新折 |
+|                 | 叠。"none" 表示没有行被重新折叠，"all" 表示所有行都被重 |
+|                 | 新折叠。                                                |
++-----------------+---------------------------------------------------------+
+| header_factory  | 一个可调用对象，它接受一个 "name" 和 "value"，并生成一  |
+|                 | 个自定义的头部对 象。                                   |
++-----------------+---------------------------------------------------------+
+
+"header_factory" 是新策略提供新功能的关键。当使用其中一个新策略时，从
+"Message" 对象检索到的任何头部都是一个由 "header_factory" 产生的对象，
+并且每次在 "Message" 上设置头部时，它都会变成一个由 "header_factory"
+产生的对象。所有这些头部对象都有一个等于头部名称的 "name" 属性。地址和
+日期头部有额外的属性，可以让你访问头部的解析数据。这意味着你现在可以做
+一些类似以下的事情：
+
+   >>> m = Message(policy=SMTP)
+   >>> m['To'] = 'Éric <foo@example.com>'
+   >>> m['to']
+   'Éric <foo@example.com>'
+   >>> m['to'].addresses
+   (Address(display_name='Éric', username='foo', domain='example.com'),)
+   >>> m['to'].addresses[0].username
+   'foo'
+   >>> m['to'].addresses[0].display_name
+   'Éric'
+   >>> m['Date'] = email.utils.localtime()
+   >>> m['Date'].datetime
+   datetime.datetime(2012, 5, 25, 21, 39, 24, 465484, tzinfo=datetime.timezone(datetime.timedelta(-1, 72000), 'EDT'))
+   >>> m['Date']
+   'Fri, 25 May 2012 21:44:27 -0400'
+   >>> print(m)
+   To: =?utf-8?q?=C3=89ric?= <foo@example.com>
+   Date: Fri, 25 May 2012 21:44:27 -0400
+
+你会注意到，当消息被序列化时，unicode 显示名称会自动编码为 "utf-8"，但
+当直接访问头部时，你会得到 unicode 版本。这消除了处理 "email.header"
+的 "decode_header()" 或 "make_header()" 函数的任何需要。
+
+你也可以从部分创建地址：
+
+   >>> m['cc'] = [Group('pals', [Address('Bob', 'bob', 'example.com'),
+   ...                           Address('Sally', 'sally', 'example.com')]),
+   ...            Address('Bonzo', addr_spec='bonz@laugh.com')]
+   >>> print(m)
+   To: =?utf-8?q?=C3=89ric?= <foo@example.com>
+   Date: Fri, 25 May 2012 21:44:27 -0400
+   cc: pals: Bob <bob@example.com>, Sally <sally@example.com>;, Bonzo <bonz@laugh.com>
+
+自动进行解码到 unicode：
+
+   >>> m2 = message_from_string(str(m))
+   >>> m2['to']
+   'Éric <foo@example.com>'
+
+当您解析消息时，可以使用头部对象的“addresses”和“groups”属性来访问组和
+单个地址:
+
+   >>> m2['cc'].addresses
+   (Address(display_name='Bob', username='bob', domain='example.com'), Address(display_name='Sally', username='sally', domain='example.com'), Address(display_name='Bonzo', username='bonz', domain='laugh.com'))
+   >>> m2['cc'].groups
+   (Group(display_name='pals', addresses=(Address(display_name='Bob', username='bob', domain='example.com'), Address(display_name='Sally', username='sally', domain='example.com')), Group(display_name=None, addresses=(Address(display_name='Bonzo', username='bonz', domain='laugh.com'),)))
+
+总结来说，如果您使用新的策略之一，头部操作将按预期工作：您的应用程序使
+用unicode字符串，而email包透明地将unicode编码和解码为RFC标准内容传输编
+码。
+
+
+其他API更改
+~~~~~~~~~~~
+
+新增 "BytesHeaderParser"，添加到 "parser" 模块中，以补充
+"HeaderParser" 并完善Bytes API。
+
+新实用函数：
+
+* "format_datetime()"：给定一个 "datetime"，生成一个格式化的字符串，用
+  于电子邮件头部。
+
+* "parsedate_to_datetime()"：给定一个来自电子邮件头部的日期字符串，将
+  其转换为带时区的 "datetime"，如果偏移量为“-0000”，则转换为不带时区的
+  "datetime"。
+
+* "localtime()"：无参数时，返回当前本地时间作为一个带时区的 "datetime"
+  ，使用本地 "timezone"。给定一个带时区的 "datetime"，将其转换为使用本
+  地 "timezone" 的带时区的 "datetime"。
+
+
+ftplib
+------
+
+* 现在 "ftplib.FTP" 接受一个 "source_address" 关键字参数用于在创建外发
+  套接字时指定 "(host, port)" 作为绑定调用中的源地址。 （由 Giampaolo
+  Rodolà 在 bpo-8594 中贡献。）
+
+* "FTP_TLS" 类现在提供了一个新的 "ccc()" 函数，用于将控制通道恢复为明
+  文。这对于利用知道如何处理非安全 FTP 的 NAT 防火墙而无需打开固定端口
+  非常有用。（由 Giampaolo Rodolà 在 bpo-12139 中贡献。）
+
+* 添加了 "ftplib.FTP.mlsd()" 方法，该方法提供了一种可解析的目录列表格
+  式，并弃用了 "ftplib.FTP.nlst()" 和 "ftplib.FTP.dir()" 方法。（由
+  Giampaolo Rodolà 在 bpo-11072 中贡献。）
+
+
+functools
+---------
+
+The "@functools.lru_cache" decorator now accepts a "typed" keyword
+argument (that defaults to "False" to ensure that it caches values of
+different types that compare equal in separate cache slots.
+(Contributed by Raymond Hettinger in bpo-13227.)
+
+
+gc
+--
+
+现在可以通过新的 "callbacks" 列表注册垃圾收集器在收集前后调用的回调函
+数。
+
+
+hmac
+----
+
+添加了新的 "compare_digest()" 函数，以防止通过时间分析对摘要进行侧信道
+攻击。（由 Nick Coghlan 和 Christian Heimes 在 bpo-15061 中贡献。）
+
+
+http
+----
+
+"http.server.BaseHTTPRequestHandler" 现在缓冲头部信息，并在调用
+"end_headers()" 时一次性写入所有头部信息。新的方法 "flush_headers()"
+可以用于直接管理累积头部信息的发送时间。（由 Andrew Schaaf 在 bpo-3709
+中贡献。）
+
+"http.server" 现在生成有效的 "HTML 4.01 strict" 输出。（由 Ezio
+Melotti 在 bpo-13295 中贡献。）
+
+"http.client.HTTPResponse" 现在有一个 "readinto()" 方法，这意味着它可
+以作为 "io.RawIOBase" 类使用。（由 John Kuhn 在 bpo-13464 中贡献。）
+
+
+html
+----
+
+现在 "html.parser.HTMLParser" 能够解析不规范的标记而不会引发错误，因此
+构造器的 *strict* 参数和 "HTMLParseError" 异常现已被弃用。 解析不规范
+标记的能力来自于一系列程序错误修正并且它们也在 Python 2.7/3.2 的最新错
+误修正发布版中可用。 （由 Ezio Melotti 在 bpo-15114 以及 bpo-14538,
+bpo-13993, bpo-13960, bpo-13358, bpo-1745761, bpo-755670, bpo-13357,
+bpo-12629, bpo-1200313, bpo-670664, bpo-13273, bpo-12888, bpo-7311 中
+贡献。）
+
+新增了一个 "html5" 字典，该字典将 HTML5 命名字符引用映射到等效的
+Unicode 字符 (例如 "html5['gt;'] == '>'")，已添加到 "html.entities" 模
+块中。 该字典现在也被 "HTMLParser" 使用。 （由 Ezio Melotti 在
+bpo-11113 和 bpo-15156 中贡献。）
+
+
+imaplib
+-------
+
+"IMAP4_SSL" 构造函数现在接受一个 SSLContext 参数，用于控制安全通道的参
+数。
+
+（由 Sijin Joseph 在 bpo-8808 中贡献。）
+
+
+inspect
+-------
+
+新增了一个 "getclosurevars()" 函数。此函数报告从函数体中引用的所有名称
+的当前绑定以及这些名称的解析位置，使得在测试依赖于有状态闭包的代码时，
+更容易验证正确的内部状态。
+
+（由  Meador Inge 和 Nick Coghlan 在 bpo-13062 中贡献。）
+
+新增了一个 "getgeneratorlocals()" 函数。此函数报告生成器堆栈帧中局部变
+量的当前绑定，使得在测试生成器时，更容易验证正确的内部状态。
+
+（由 Meador Inge 在 bpo-15153 中贡献。）
+
+
+io
+--
+
+"open()" 函数新增了一个 "'x'" 模式，可用于独占地创建新文件，如果文件已
+存在，则引发 "FileExistsError"。它基于 C11 中 fopen() 的 'x' 模式。
+
+（由 David Townshend 在 bpo-12760 中贡献。）
+
+"TextIOWrapper" 类的构造器新增了 *write_through* 可选参数。 如果
+*write_through* 为 "True"，对 "write()" 的调用会确保不被缓冲：在
+"TextIOWrapper" 对象上写入的任何数据会立即交给其下层的二进制缓冲区来处
+理。
+
+
+itertools
+---------
+
+"accumulate()" 现在接受一个可选的 "func" 参数，用于提供用户定义的二元
+函数。
+
+
+logging
+-------
+
+"basicConfig()" 函数现在支持一个可选的 "handlers" 参数，该参数接受一个
+可迭代的处理器列表，用于添加到根记录器。
+
+向 "SysLogHandler" 添加了一个类级属性 "append_nul" 以允许对向 syslog
+记录添加 "NUL" ("\000") 字节的行为进行控制，因为某些守护进程要求这样做
+而另一些则会直接传递给日志。
+
+
+math
+----
+
+"math" 模块新增了一个函数 "log2()"，它返回 *x* 的以 2 为底的对数。
+
+（由 Mark Dickinson 在 bpo-11888 中编写。）
+
+
+mmap
+----
+
+现在 "read()" 方法能更好地兼容其他文件型对象：如果参数被省略或指定为
+"None"，它将返回从当前文件位置到映射对象末尾的字节数据。 （由 Petri
+Lehtinen 在 bpo-12021 中贡献。）
+
+
+multiprocessing
+---------------
+
+新增的 "multiprocessing.connection.wait()" 函数允许附带超时限制轮询多
+个对象（如连接、套接字和管道）。 （由 Richard Oudkerk 在 bpo-12328 中
+贡献。）
+
+现在 "multiprocessing.connection.Connection" 对象可通过多进程连接进行
+传输。 （由 Richard Oudkerk 在 bpo-4892 中贡献。）
+
+现在 "multiprocessing.Process" 可接受 "daemon" 关键字参数来覆盖继承来
+自父进程的 "daemon" 旗标的默认行为 (bpo-6064)。
+
+新增的属性 "multiprocessing.Process.sentinel" 允许程序使用适当的 OS 原
+语来同时等待多个 "Process" 对象 (例如，在 posix 系统上是使用 "select"
+)。
+
+新增的方法 "multiprocessing.pool.Pool.starmap()" 和 "starmap_async()"
+提供了针对现有 "multiprocessing.pool.Pool.map()" 和 "map_async()" 函数
+的 "itertools.starmap()" 对应物。 （由 Hynek Schlawack 在 bpo-12708 中
+贡献。）
+
+
+nntplib
+-------
+
+现在 "nntplib.NNTP" 类支持上下文管理协议以无条件地处理 "socket.error"
+异常并在完成后关闭 NNTP 连接:
+
+   >>> from nntplib import NNTP
+   >>> with NNTP('news.gmane.org') as n:
+   ...     n.group('gmane.comp.python.committers')
+   ...
+   ('211 1755 1 1755 gmane.comp.python.committers', 1755, 1, 1755, 'gmane.comp.python.committers')
+   >>>
+
+（由 Giampaolo Rodolà 在 bpo-9795 中贡献。）
+
+
+os
+--
+
+* "os" 模块新增了 "pipe2()" 函数以便能够创建会自动设置 "O_CLOEXEC" 或
+  "O_NONBLOCK" 旗标的管道。 这特别适用于避免多线程的程序出现竞争条件。
+
+* "os" 模块新增了一个 "sendfile()" 函数，提供了一种高效的“零拷贝”方式
+  来将数据从一个文件（或套接字）描述符复制到另一个描述符。所谓“零拷贝”
+  是指所有数据在两个描述符之间的复制完全由内核完成，无需将数据复制到用
+  户空间缓冲区。"sendfile()" 可用于高效地将磁盘上的文件数据复制到网络
+  套接字，例如用于下载文件。
+
+  （由 Ross Lagerwall 和 Giampaolo Rodolà 在 bpo-10882 中提交的补丁。
+  ）
+
+* 为了避免诸如符号链接攻击和临时文件及目录的问题，操作文件描述符比操作
+  文件名更可靠（也更快）。 Python 3.3 增强了现有函数并引入了新函数来处
+  理文件描述符 (bpo-4761，bpo-10755 和 bpo-14626)。
+
+  * "os" 模块新增了一个 "fwalk()" 函数，类似于 "walk()"，但它还会生成
+    引用访问过的目录的文件描述符。这对于避免符号链接竞争条件特别有用。
+
+  * 下列函数新增了可选的 *dir_fd* (相对于目录描述符的路径) 和/或
+    *follow_symlinks* (不跟随符号链接): "access()", "chflags()",
+    "chmod()", "chown()", "link()", "lstat()", "mkdir()", "mkfifo()",
+    "mknod()", "open()", "readlink()", "remove()", "rename()",
+    "replace()", "rmdir()", "stat()", "symlink()", "unlink()",
+    "utime()"。 支持使用这些形参的平台可通过集合 "os.supports_dir_fd"
+    和 "os.supports_follow_symlinks" 来检测。
+
+  * 以下函数现在支持使用文件描述符作为其路径参数："chdir()"，"chmod()"
+    ，"chown()"，"execve()"，"listdir()"，"pathconf()"，"exists()"，
+    "stat()"，"statvfs()"，"utime()"。平台对此的支持可以通过集合
+    "os.supports_fd" 检查。
+
+* "access()" 接受一个 "effective_ids" 关键字参数，以在访问检查中使用有
+  效 uid/gid 而不是真实 uid/gid。平台对此的支持可以通过集合
+  "supports_effective_ids" 检查。
+
+* "os" 模块新增了两个函数："getpriority()" 和 "setpriority()"。它们可
+  以用来获取或设置进程的优先级/友好度，类似于 "os.nice()"，但扩展到所
+  有进程而不仅仅是当前进程。
+
+  （由 Giampaolo Rodolà 在 bpo-10784 中提交的补丁。）
+
+* 新的 "os.replace()" 函数允许跨平台重命名文件，并覆盖目标文件。使用
+  "os.rename()" 时，在 POSIX 下会覆盖现有目标文件，但在 Windows 下会引
+  发错误。（由 Antoine Pitrou 在 bpo-8828 中贡献。）
+
+* stat 系列函数 ("stat()"，"fstat()" 和 "lstat()") 现在支持以纳秒精度
+  读取文件的时间戳。 相应地，"utime()" 现在可以以纳秒精度写入文件时间
+  戳。 （由 Larry Hastings 在 bpo-14127 中贡献。）
+
+* 新的 "os.get_terminal_size()" 函数查询附加到文件描述符的终端大小。另
+  请参见 "shutil.get_terminal_size()"。（由 Zbigniew Jędrzejewski-
+  Szmek 贡献，见 bpo-13609。）
+
+* 支持 Linux 扩展属性的新函数 (bpo-12720): "getxattr()"，"listxattr()"
+  ，"removexattr()"，"setxattr()"。
+
+* 新的调度器接口。这些函数控制操作系统如何为进程分配 CPU 时间。新函数
+  包括："sched_get_priority_max()"，"sched_get_priority_min()"，
+  "sched_getaffinity()"，"sched_getparam()"，"sched_getscheduler()"，
+  "sched_rr_get_interval()"，"sched_setaffinity()"，"sched_setparam()"
+  ，"sched_setscheduler()"，"sched_yield()"，
+
+* 控制文件系统的新函数：
+
+  * "posix_fadvise()"：宣布以特定模式访问数据的意图，从而允许内核进行
+    优化。
+
+  * "posix_fallocate()"：确保为文件分配足够的磁盘空间。
+
+  * "sync()"：强制将所有内容写入磁盘。
+
+* 其他新的 POSIX 函数：
+
+  * "lockf()"：对打开的文件描述符应用、测试或移除 POSIX 锁。
+
+  * "pread()"：从文件描述符的偏移量处读取，文件偏移量保持不变。
+
+  * "pwrite()"：从偏移量处写入文件描述符，文件偏移量保持不变。
+
+  * "readv()"：从文件描述符读取到多个可写缓冲区。
+
+  * "truncate()"：截断与 *path* 对应的文件，使其大小最多为 *length* 字
+    节。
+
+  * "waitid()": 等待一个或多个子进程的完成。
+
+  * "writev()": 将*buffers*的内容写入文件描述符，其中*buffers*是任意序
+    列的缓冲区。
+
+  * "getgrouplist()" (bpo-9344): 返回指定用户所属的组ID列表。
+
+* "times()" 和 "uname()": 返回类型从元组更改为具有命名属性的类元组对象
+  。
+
+* 一些平台现在支持 "lseek()" 函数的额外常量，例如 "os.SEEK_HOLE" 和
+  "os.SEEK_DATA"。
+
+* 新增常量 "RTLD_LAZY", "RTLD_NOW", "RTLD_GLOBAL", "RTLD_LOCAL",
+  "RTLD_NODELETE", "RTLD_NOLOAD" 和 "RTLD_DEEPBIND" 将在支持它们的平台
+  上可用。 这些常量将被用于 "sys.setdlopenflags()" 函数，并取代在
+  "ctypes" 和 "DLFCN" 中定义的类似常量。 （由 Victor Stinner 在
+  bpo-13226 中贡献。）
+
+* "os.symlink()" 现在接受（并忽略）非Windows平台上的
+  "target_is_directory" 关键字参数，以简化跨平台支持。
+
+
+pdb
+---
+
+Tab 补全现在不仅适用于命令名称，也适用于它们的参数。 例如，对于
+"break" 命令，函数和文件名将被补全。
+
+（由 Georg Brandl 在 bpo-14210 中贡献）
+
+
+pickle
+------
+
+现在 "pickle.Pickler" 对象具有一个可选的 "dispatch_table" 属性以允许针
+对每个 pickler 设置缩减函数。
+
+（由 Richard Oudkerk 在 bpo-14166 中贡献。）
+
+
+pydoc
+-----
+
+Tk GUI 和 "serve()" 函数已从 "pydoc" 模块中移除: "pydoc -g" 和
+"serve()" 在 Python 3.2 中已被弃用。
+
+
+re
+--
+
+现在 "str" 正则表达式已支持 "\u" 和 "\U" 转义符。
+
+（由 Serhiy Storchaka 在 bpo-3665 中贡献。）
+
+
+sched
+-----
+
+* "run()" 现在接受一个 *blocking* 参数，当设置为 false 时，该方法执行
+  即将到期的计划事件（如果有）并立即返回。这在您希望使用 "scheduler"
+  在非阻塞应用程序中时非常有用。（由 Giampaolo Rodolà 在 bpo-13449 中
+  贡献。）
+
+* "scheduler" 类现在可以安全地在多线程环境中使用。（由 Josiah Carlson
+  和 Giampaolo Rodolà 在 bpo-8684 中贡献。）
+
+* "scheduler" 类构造函数的 *timefunc* 和 *delayfunct* 参数现在是可选的
+  ，默认分别为 "time.time()" 和 "time.sleep()"。（由 Chris Clark 在
+  bpo-13245 中贡献。）
+
+* "enter()" 和 "enterabs()" 的 *argument* 参数现在是可选的。 (由 Chris
+  Clark 在 bpo-13245 中贡献)
+
+* "enter()" 和 "enterabs()" 现在接受一个 *kwargs* 参数。 (由 Chris
+  Clark 在 bpo-13245 中贡献)
+
+
+select
+------
+
+Solaris 及其衍生平台新增了一个类 "select.devpoll"，用于通过
+"/dev/poll" 实现高性能异步套接字。 (由 Jesús Cea Avión 在 bpo-6397 中
+贡献)
+
+
+shlex
+-----
+
+之前未文档化的 "pipes" 模块中的辅助函数 "quote" 已移至 "shlex" 模块并
+进行文档化。 "quote()" 正确地转义字符串中所有可能在 shell 中具有特殊意
+义的字符。
+
+
+shutil
+------
+
+* 新的函数：
+
+  * "disk_usage()"：提供总、已用和可用磁盘空间统计信息。 (由 Giampaolo
+    Rodolà 在 bpo-12442 中贡献)
+
+  * "chown()"：允许更改给定路径的用户和/或组，同时可以指定用户/组名称
+    ，而不仅限于其数字 ID。 (由 Sandro Tosi 在 bpo-12191 中贡献)
+
+  * "shutil.get_terminal_size()"：返回解释器所连接的终端窗口的大小。 (
+    由 Zbigniew Jędrzejewski-Szmek 在 bpo-13609 中贡献)
+
+* "copy2()" 和 "copystat()" 现在在支持的平台中可以保留纳秒精度的文件时
+  间戳。它们还保留 Linux 上的文件“扩展属性”。 (由 Larry Hastings 在
+  bpo-14127 和 bpo-15238 中贡献)
+
+* 多个函数现在接受一个可选的 "symlinks" 参数：当该参数为真时，不解析符
+  号链接，操作直接作用于符号链接本身（或在相关情况下创建一个）。 (由
+  Hynek Schlawack 在 bpo-12715 中贡献)
+
+* 当将文件复制到不同的文件系统时，"move()" 现在处理符号链接的方式与
+  POSIX 的 "mv" 命令相同，即重新创建符号链接而不是复制目标文件内容。(
+  由 Jonathan Niehof 在 bpo-9993 中贡献。) "move()" 现在还返回 "dst"
+  参数作为其结果。
+
+* "rmtree()" 现在对符号链接攻击具有抵抗力，适用于支持 "os.open()" 和
+  "os.unlink()" 中新 "dir_fd" 参数的平台。（由 Martin von Löwis 和
+  Hynek Schlawack 在 bpo-4489 中贡献。）
+
+
+signal
+------
+
+* "signal" 模块新增的函数:
+
+  * "pthread_sigmask()": 获取和/或改变调用方线程的信号掩码（由 Jean-
+    Paul Calderone 在 bpo-8407 中贡献）；
+
+  * "pthread_kill()": 向指定线程发送信号；
+
+  * "sigpending()": 检查挂起的函数；
+
+  * "sigwait()": 等待一个信号;
+
+  * "sigwaitinfo()": 等待信号，返回相关的详细信息；
+
+  * "sigtimedwait()"：类似于 "sigwaitinfo()"，但带有超时。
+
+* 信号处理程序将信号号码作为一个字节而不是空字节写入唤醒文件描述符。因
+  此，可以等待多个信号并知道哪些信号被触发。
+
+* "signal.signal()" 和 "signal.siginterrupt()" 引发 OSError，而不是
+  RuntimeError：OSError 具有 errno 属性。
+
+
+smtpd
+-----
+
+"smtpd" 模块现在支持 **RFC 5321** (扩展 SMTP) 和 **RFC 1870** (大小扩
+展) 。根据标准，这些扩展仅在客户端使用 "EHLO" 命令发起会话时启用。
+
+(初始 "ELHO" 支持由 Alberto Trevino 提供。 大小扩展由 Juhana
+Jauhiainen 提供。 Michele Orrù 和 Dan Boswell 对补丁做出了大量额外贡献
+。 bpo-8739)
+
+
+smtplib
+-------
+
+"SMTP"、"SMTP_SSL" 和 "LMTP" 类现在接受 "source_address" 关键字参数，
+用于指定在创建传出套接字时绑定调用中使用的 "(host, port)" 源地址。（由
+Paulo Scardine 在 bpo-11281 中贡献。）
+
+"SMTP" 现在支持上下文管理协议，允许 "SMTP" 实例在 "with" 语句中使用。
+（由 Giampaolo Rodolà 在 bpo-11289 中贡献。）
+
+"SMTP_SSL" 构造函数和 "starttls()" 方法现在接受一个 SSLContext 参数，
+用于控制安全通道的参数。（由 Kasun Herath 在 bpo-8809 中贡献。）
+
+
+socket
+------
+
+* "socket" 类现在公开了额外的方法，用于在底层平台支持时处理辅助数据：
+
+  * "sendmsg()"
+
+  * "recvmsg()"
+
+  * "recvmsg_into()"
+
+  （由 David Watson 在 bpo-6560 中贡献，基于 Heiko Wundram 的早期补丁
+  。）
+
+* "socket" 类现在支持 Linux 上的 PF_CAN 协议族（
+  https://en.wikipedia.org/wiki/Socketcan）。（
+  https://lwn.net/Articles/253425）
+
+  （由 Matthias Fuchs 贡献，Tiago Gonçalves 在 bpo-10141 中更新。）
+
+* "socket" 类现在支持 PF_RDS 协议族（
+  https://en.wikipedia.org/wiki/Reliable_Datagram_Sockets 和
+  https://oss.oracle.com/projects/rds）。
+
+* "socket" 类现在支持 OS X 上的 "PF_SYSTEM" 协议族。（由 Michael
+  Goderbauer 在 bpo-13777 中贡献。）
+
+* 新函数 "sethostname()" 允许在 Unix 系统上设置主机名，如果调用进程具
+  有足够权限。（由 Ross Lagerwall 在 bpo-10866 中贡献。）
+
+
+socketserver
+------------
+
+"BaseServer" 现在有一个可重写的方法 "service_actions()"，该方法由
+"serve_forever()" 方法在服务循环中调用。"ForkingMixIn" 现在使用此方法
+来清理僵尸子进程。（由 Justin Warkentin 在 bpo-11109 中贡献。）
+
+
+sqlite3
+-------
+
+新增的 "sqlite3.Connection" 方法 "set_trace_callback()" 可被用于捕获由
+sqlite 处理的所有 sql 命令的追踪信息。 （由 Torsten Landschoff 在
+bpo-11688 中贡献。）
+
+
+ssl
+---
+
+* "ssl" 新增了两个随机生成函数：
+
+  * "RAND_bytes()": 生成高加密强度的伪随机字节数据。
+
+  * "RAND_pseudo_bytes()": 生成伪随机字节数据。
+
+  （由 Victor Stinner 在 bpo-12049 中贡献。）
+
+* "ssl" 模块现在公开了一个更细粒度的异常层次结构，以便更容易检查各种错
+  误类型。（由 Antoine Pitrou 在 bpo-11183 中贡献。）
+
+* "load_cert_chain()" 现在接受一个 *password* 参数，用于如果私钥被加密
+  时使用。（由 Adam Simpkins 在 bpo-12803 中贡献。)
+
+* 现在支持通过 "load_dh_params()" 和 "set_ecdh_curve()" 方法实现常规和
+  基于椭圆曲线的 Diffie-Hellman 密钥交换。（由 Antoine Pitrou 贡献于
+  bpo-13626 和 bpo-13627。）
+
+* SSL 套接字新增了 "get_channel_binding()" 方法，允许实现某些认证机制
+  ，例如 SCRAM-SHA-1-PLUS。（由 Jacek Konieczny 贡献于 bpo-12551。）
+
+* 您可以通过新的 "compression()" 方法查询 SSL 套接字使用的 SSL 压缩算
+  法。新的属性 "OP_NO_COMPRESSION" 可用于禁用压缩。（由 Antoine Pitrou
+  贡献于 bpo-13634。）
+
+* 已添加对使用 "ssl.SSLContext.set_npn_protocols()" 方法的 Next
+  Protocol Negotiation 扩展的支持。（由 Colin Marc 贡献于 bpo-14204。
+  ）
+
+* 由于 "library" 和 "reason" 属性，现在可以更轻松地检查 SSL 错误。（由
+  Antoine Pitrou 贡献于 bpo-14837。）
+
+* "get_server_certificate()" 函数现在支持 IPv6。（由 Charles-François
+  Natali 贡献于 bpo-11811。）
+
+* 新的属性 "OP_CIPHER_SERVER_PREFERENCE" 允许将 SSLv3 服务器套接字设置
+  为使用服务器的密码排序偏好，而不是客户端的 (bpo-13635)。
+
+
+stat
+----
+
+未文档化的 tarfile.filemode 函数已移至 "stat.filemode()"。它可用于将文
+件的模式转换为形式为 '-rwxrwxrwx' 的字符串。
+
+（由 Giampaolo Rodolà 在 bpo-14807 中贡献。）
+
+
+struct
+------
+
+"struct" 模块现在通过新的代码 "n" 和 "N" 分别支持 "ssize_t" 和
+"size_t"。（由 Antoine Pitrou 贡献于 bpo-3163。）
+
+
+subprocess
+----------
+
+在 POSIX 平台上，命令字符串现在可以是字节对象。（由 Victor Stinner 在
+bpo-8513 中贡献。）
+
+一个新的常量 "DEVNULL" 允许以平台独立的方式抑制输出。（由 Ross
+Lagerwall 在 bpo-5870 中贡献。）
+
+
+sys
+---
+
+"sys" 模块新增了一个 "thread_info" *具名元组*，包含有关线程实现的信息
+(bpo-11223)。
+
+
+tarfile
+-------
+
+"tarfile" 现在通过 "lzma" 模块支持 "lzma" 编码。（由 Lars Gustäbel 在
+bpo-5689 中贡献。）
+
+
+tempfile
+--------
+
+现在 "tempfile.SpooledTemporaryFile" 的 "truncate()" 方法接受 "size"
+形参。 （由 Ryan Kelly 在 bpo-9957 中贡献。）
+
+
+textwrap
+--------
+
+"textwrap" 模块新增了一个 "indent()" 函数，可以方便地为文本块中的选定
+行添加一个公共前缀 (bpo-13857)。
+
+
+threading
+---------
+
+"threading.Condition"、"threading.Semaphore"、
+"threading.BoundedSemaphore"、"threading.Event" 和 "threading.Timer"，
+这些原本是返回类实例的工厂函数，现在都变成了类，并且可以被子类化。（由
+Éric Araujo 在 bpo-10968 中贡献。）
+
+"threading.Thread" 构造函数现在接受一个 "daemon" 关键字参数，以覆盖从
+父线程继承 "daemon" 标志值的默认行为 (bpo-6064)。
+
+原本私有的函数 "_thread.get_ident" 现在作为公共函数
+"threading.get_ident()" 提供。这消除了标准库中直接访问 "_thread" 模块
+的几种情况。使用 "_thread.get_ident" 的第三方代码也应改为使用新的公共
+接口。
+
+
+time
+----
+
+**PEP 418** 向 "time" 模块添加了新函数：
+
+* "get_clock_info()"：获取时钟信息。
+
+* "monotonic()"：单调时钟（不会倒退），不受系统时钟更新影响。
+
+* "perf_counter()"：具有最高可用分辨率的性能计数器，用于测量短时间间隔
+  。
+
+* "process_time()": 当前进程的系统CPU时间和用户CPU时间之和。
+
+其他新函数：
+
+* "clock_getres()"，"clock_gettime()" 和 "clock_settime()" 函数，配合
+  "CLOCK_*xxx*" 常量。（由Victor Stinner贡献，见 bpo-10278。）
+
+为了提高跨平台一致性，"sleep()" 现在在传入负数睡眠值时会引发
+"ValueError"。之前在posix上是错误，但在Windows上会导致无限睡眠。
+
+
+types
+-----
+
+添加新的 "types.MappingProxyType" 类：映射的只读代理。 (bpo-14386)
+
+新函数 "types.new_class()" 和 "types.prepare_class()" 提供了对 **PEP
+3115** 兼容的动态类型创建的支持。 (bpo-14588)
+
+
+unittest
+--------
+
+"assertRaises()"，"assertRaisesRegex()"，"assertWarns()" 和
+"assertWarnsRegex()" 现在接受一个关键字参数 *msg*，当用作上下文管理器
+时。（由Ezio Melotti和Winston Ewert贡献，见 bpo-10775。）
+
+"unittest.TestCase.run()" 现在返回 "TestResult" 对象。
+
+
+urllib
+------
+
+"Request" 类现在接受一个 *method* 参数，由 "get_method()" 用于确定应使
+用哪种HTTP方法。例如，这将发送一个 "'HEAD'" 请求：
+
+   >>> urlopen(Request('https://www.python.org', method='HEAD'))
+
+(bpo-1673007)
+
+
+webbrowser
+----------
+
+"webbrowser" 模块支持更多的“浏览器”：Google Chrome (根据版本和操作系统
+命名为 **chrome**，**chromium**，**chrome-browser** 或 **chromium-
+browser**)，以及通用的启动器 **xdg-open** (来自FreeDesktop.org项目) 和
+**gvfs-open** (GNOME 3 的默认 URI 处理程序)。 （前者由Arnaud Calmettes
+贡献，见 bpo-13620，后者由 Matthias Klose 贡献，见 bpo-14493。）
+
+
+xml.etree.ElementTree
+---------------------
+
+现在 "xml.etree.ElementTree" 模块默认会导入其 C 加速器；不再需要显式导
+入 "xml.etree.cElementTree" (此模块被保留用于向下兼容，但现已弃用)。
+此外， "Element" 方法的 "iter" 方法族已得到优化（用 C 语言重写）。 该
+模块的文档也得到大幅改进并增加了示例和更详细的参考资源。
+
+
+zlib
+----
+
+新属性 "zlib.Decompress.eof" 使得可以区分正确形成的压缩流和不完整或截
+断的压缩流。（由 Nadeem Vawda 在 bpo-12646 中贡献。）
+
+新属性 "zlib.ZLIB_RUNTIME_VERSION" 报告在运行时加载的底层 "zlib" 库的
+版本字符串。（由 Torsten Landschoff 在 bpo-12306 中贡献。）
+
+
+性能优化
+========
+
+已增加的主要性能改善:
+
+* 得益于 **PEP 393**，Unicode 字符串的某些操作已得到优化：
+
+  * 内存占用根据文本内容减少到原来的 1/2 到 1/4。
+
+  * 将 ASCII 字符串编码为 UTF-8 不再需要对字符进行编码，UTF-8 的表示法
+    与 ASCII 的表示法是共享的
+
+  * UTF-8 编码器已优化。
+
+  * 重复单个 ASCII 字母和获取 ASCII 字符串的子字符串的速度提高了 4 倍
+    。
+
+* UTF-8 编码现在快 2 到 4 倍。  UTF-16 编码的速度现在提高了 10 倍。
+
+  （由 Serhiy Storchaka 在 bpo-14624、 bpo-14738 和 bpo-15026 中贡献。
+  ）
+
+
+构建和 C API 的改变
+===================
+
+针对 Python 构建过程和 C API 的改变包括:
+
+* 新的 **PEP 3118** 相关功能：
+
+  * "PyMemoryView_FromMemory()"
+
+* **PEP 393** 添加了新的 Unicode 类型，宏和函数：
+
+  * 高阶 API：
+
+    * "PyUnicode_CopyCharacters()"
+
+    * "PyUnicode_FindChar()"
+
+    * "PyUnicode_GetLength()", "PyUnicode_GET_LENGTH"
+
+    * "PyUnicode_New()"
+
+    * "PyUnicode_Substring()"
+
+    * "PyUnicode_ReadChar()", "PyUnicode_WriteChar()"
+
+  * 低阶 API:
+
+    * "Py_UCS1", "Py_UCS2", "Py_UCS4" 类型
+
+    * "PyASCIIObject" 和 "PyCompactUnicodeObject" 结构
+
+    * "PyUnicode_READY"
+
+    * "PyUnicode_FromKindAndData()"
+
+    * "PyUnicode_AsUCS4()", "PyUnicode_AsUCS4Copy()"
+
+    * "PyUnicode_DATA", "PyUnicode_1BYTE_DATA",
+      "PyUnicode_2BYTE_DATA", "PyUnicode_4BYTE_DATA"
+
+    * "PyUnicode_KIND" 使用 "PyUnicode_Kind" 枚举:
+      "PyUnicode_WCHAR_KIND", "PyUnicode_1BYTE_KIND",
+      "PyUnicode_2BYTE_KIND", "PyUnicode_4BYTE_KIND"
+
+    * "PyUnicode_READ", "PyUnicode_READ_CHAR", "PyUnicode_WRITE"
+
+    * "PyUnicode_MAX_CHAR_VALUE"
+
+* "PyArg_ParseTuple" 现在接受 "c" 格式的 "bytearray" (bpo-12380)。
+
+
+弃用
+====
+
+
+不支持的操作系统
+----------------
+
+由于缺少维护人员，不再支持 OS/2 和 VMS 系统 。
+
+由于维护负担，将 "COMSPEC" 设置为 "command.com" 的 Windows平台（含
+Windows 2000）不再受支持。
+
+OSF支持在3.2中被弃用，现在已经被完全删除。
+
+
+已弃用的 Python 模块、函数和方法
+--------------------------------
+
+* 向 "object.__format__()" 传递非空字符串的做法已被弃用，在 Python 3.4
+  中会产生一个 "TypeError" (bpo-9856)。
+
+* 由于 **PEP 393**，"unicode_internal" 编解码器已被弃用。 请使用 UTF-8
+  、UTF-16 ("utf-16-le" 或 "utf-16-be") 或 UTF-32 ("utf-32-le" 或
+  "utf-32-be")
+
+* "ftplib.FTP.nlst()" 和 "ftplib.FTP.dir()"：使用 "ftplib.FTP.mlsd()"
+  。
+
+* "platform.popen()": 使用 "subprocess" 模块。 特别查看 使用
+  subprocess 模块替代旧有函数 小节 (bpo-11377)。
+
+* bpo-13374：在 "os" 模块中，Windows 字节 API 已不推荐使用。使用
+  Unicode 文件名，而不是字节文件名，以便不再依赖 ANSI 代码页并支持任何
+  文件名。
+
+* bpo-13988: "xml.etree.cElementTree" 模块已被弃用。 将会在可能的情况
+  下自动使用加速器。
+
+* "time.clock()" 的行为依赖于具体平台：请根据你的需求改用新的
+  "time.perf_counter()" 或 "time.process_time()" 函数，以获得具有良好
+  定义的行为。
+
+* "os.stat_float_times()" 函数已被弃用。
+
+* "abc" 模块：
+
+  * "@abc.abstractproperty" has been deprecated, use "@property" with
+    "@abc.abstractmethod" instead.
+
+  * "@abc.abstractclassmethod" has been deprecated, use "@classmethod"
+    with "@abc.abstractmethod" instead.
+
+  * "@abc.abstractstaticmethod" has been deprecated, use
+    "@staticmethod" with "@abc.abstractmethod" instead.
+
+* "importlib" 包：
+
+  * 现在 "importlib.abc.SourceLoader.path_mtime()" 已被弃用而应改用
+    "importlib.abc.SourceLoader.path_stats()" ，因为字节码文件现在会同
+    时储存编译出该字节码文件的源文件的修改时间和大小。
+
+
+已弃用的 C API 函数和类型
+-------------------------
+
+"Py_UNICODE" 已经在 **PEP 393** 弃用，并将于 Python 4 中移除。所有使用
+此类型的函数都已弃用：
+
+使用 "Py_UNICODE" 和 Py_UNICODE* 类型的 Unicode 函数和方法：
+
+* "PyUnicode_FromUnicode"：使用 "PyUnicode_FromWideChar()" 或
+  "PyUnicode_FromKindAndData()"。
+
+* "PyUnicode_AS_UNICODE"、 "PyUnicode_AsUnicode()"、
+  "PyUnicode_AsUnicodeAndSize()": 使用 "PyUnicode_AsWideCharString()"
+  。
+
+* "PyUnicode_AS_DATA": 使用 "PyUnicode_DATA" 结合 "PyUnicode_READ" 和
+  "PyUnicode_WRITE"
+
+* "PyUnicode_GET_SIZE"、 "PyUnicode_GetSize()": 使用
+  "PyUnicode_GET_LENGTH" 或 "PyUnicode_GetLength()"
+
+* "PyUnicode_GET_DATA_SIZE": 使用 "PyUnicode_GET_LENGTH(str) *
+  PyUnicode_KIND(str)" (仅适用于已准备好的字符串)
+
+* "PyUnicode_AsUnicodeCopy()": 使用 "PyUnicode_AsUCS4Copy()" 或
+  "PyUnicode_AsWideCharString()"
+
+* "PyUnicode_GetMax()"
+
+操作 Py_UNICODE* 字符串的函数和宏：
+
+* "Py_UNICODE_strlen()": 使用 "PyUnicode_GetLength()" 或
+  "PyUnicode_GET_LENGTH"
+
+* "Py_UNICODE_strcat()": 使用 "PyUnicode_CopyCharacters()" 或
+  "PyUnicode_FromFormat()"
+
+* "Py_UNICODE_strcpy()", "Py_UNICODE_strncpy()", "Py_UNICODE_COPY()":
+  使用 "PyUnicode_CopyCharacters()" 或 "PyUnicode_Substring()"
+
+* "Py_UNICODE_strcmp()": 使用 "PyUnicode_Compare()"
+
+* "Py_UNICODE_strncmp()": 使用 "PyUnicode_Tailmatch()"
+
+* "Py_UNICODE_strchr()", "Py_UNICODE_strrchr()": 使用
+  "PyUnicode_FindChar()"
+
+* "Py_UNICODE_FILL()": 使用 "PyUnicode_Fill()"
+
+* "Py_UNICODE_MATCH"
+
+编码器:
+
+* "PyUnicode_Encode()": 使用 "PyUnicode_AsEncodedObject()"
+
+* "PyUnicode_EncodeUTF7()"
+
+* "PyUnicode_EncodeUTF8()": 使用 "PyUnicode_AsUTF8()" 或
+  "PyUnicode_AsUTF8String()"
+
+* "PyUnicode_EncodeUTF32()"
+
+* "PyUnicode_EncodeUTF16()"
+
+* "PyUnicode_EncodeUnicodeEscape()" 使用
+  "PyUnicode_AsUnicodeEscapeString()"
+
+* "PyUnicode_EncodeRawUnicodeEscape()" 使用
+  "PyUnicode_AsRawUnicodeEscapeString()"
+
+* "PyUnicode_EncodeLatin1()": 使用 "PyUnicode_AsLatin1String()"
+
+* "PyUnicode_EncodeASCII()": 使用 "PyUnicode_AsASCIIString()"
+
+* "PyUnicode_EncodeCharmap()"
+
+* "PyUnicode_TranslateCharmap()"
+
+* "PyUnicode_EncodeMBCS()": 使用 "PyUnicode_AsMBCSString()" 或
+  "PyUnicode_EncodeCodePage()" (用 "CP_ACP" code_page)
+
+* "PyUnicode_EncodeDecimal()"、 "PyUnicode_TransformDecimalToASCII()"
+
+
+弃用的特性
+----------
+
+"array" 模块的 "'u'" 格式代码现已弃用，将在 Python 4 中与
+("Py_UNICODE") API 的其他部分一起删除。
+
+
+移植到 Python 3.3
+=================
+
+本节列出了先前描述的更改以及可能需要更改代码的其他错误修正.
+
+
+移植 Python 代码
+----------------
+
+* 默认启用哈希随机化。 将 "PYTHONHASHSEED" 环境变量设为 "0" 可禁用哈希
+  随机化。 另请参阅 "object.__hash__()" 方法。
+
+* bpo-12326: 在 Linux 上，sys.platform 不再包含主要版本。现在它始终是
+  "linux"，而不是 "linux2" 或 "linux3"，这取决于用于构建 Python 的
+  Linux 版本。请用 sys.platform.startswith('linux') 替换 sys.platform
+  == 'linux2'，如果不需要支持较旧的 Python 版本，则可直接替换成
+  sys.platform == 'linux'。
+
+* bpo-13847、 bpo-14180: "time" 和 "datetime": 现在如果时间戳超出范围
+  将会引发 "OverflowError" 而不是 "ValueError"。 现在如果 C 函数
+  "gmtime()" 或 "localtime()" 失败将会引发 "OSError"。
+
+* import 使用的默认查找器现在利用特定目录内容的缓存。如果您创建了一个
+  Python 源文件或无源字节码文件，请确保调用
+  "importlib.invalidate_caches()" 以清除缓存，以便查找器能够注意到新文
+  件。
+
+* "ImportError" 现在使用尝试导入的模块的完整名称。检查 ImportError 消
+  息的 doctest 需要更新为使用模块的完整名称，而不仅仅是名称的尾部。
+
+* "__import__()" 函数的 *index* 参数现在默认值为 0，而不是 -1，并且不
+  再支持负值。在实现 **PEP 328** 时，默认值仍为 -1 是一个疏忽。如果你
+  需要继续执行相对导入后再进行绝对导入，可以使用索引为 1 的相对导入，
+  然后再使用索引为 0 的另一个导入。不过，建议使用
+  "importlib.import_module()" 而不是直接调用 "__import__()"。
+
+* "__import__()" 不再允许对顶层模块使用除 0 以外的索引值。例如，
+  "__import__('sys', level=1)" 现在是一个错误。
+
+* 因为 "sys.meta_path" 和 "sys.path_hooks" 上现在默认具有查找器，你很
+  可能会希望使用 "list.insert()" 而不是 "list.append()" 来向列表添加元
+  素。
+
+* 由于 "None" 现在会被插入到 "sys.path_importer_cache" 中，如果你正在
+  清除路径字典中没有查找器的条目，你需要移除与 "None" **和**
+  "imp.NullImporter" 配对的键，以保持向后兼容。这在旧版本的 Python 中
+  会导致额外的开销，因为它们会重新将 "None" 插入到
+  "sys.path_importer_cache" 中，表示使用隐式查找器，但从语义上讲，这不
+  应改变任何内容。
+
+* "importlib.abc.Finder" 不再指定必须实现的 "find_module()" 抽象方法。
+  如果你依赖于子类实现该方法，请确保首先检查该方法的存在。不过，在处理
+  *路径条目查找器* 时，你可能首先需要检查 "find_loader()"。
+
+* "pkgutil" 已内部转换为使用 "importlib"。这消除了许多边缘情况，在这些
+  情况下，旧的 **PEP 302** 导入模拟行为未能与真实导入系统的行为匹配。
+  导入模拟本身仍然存在，但现在已被弃用。"pkgutil.iter_importers()" 和
+  "pkgutil.walk_packages()" 函数特别处理标准导入钩子，因此它们仍然受支
+  持，尽管它们不提供非标准的 "iter_modules()" 方法。
+
+* 在 "email.header.decode_header()" 所做的解析中，一个长期存在的 RFC
+  兼容性错误 (bpo-1079) 已被修复。使用标准习惯用法将编码的头部转换为
+  unicode ("str(make_header(decode_header(h)))") 的代码将看不到任何变
+  化，但查看 decode_header 返回的各个元组的代码将看到，现在 "ASCII" 部
+  分前后的空白符被包含在 "ASCII" 部分中。 使用 "make_header" 构建头部
+  的代码也应继续工作而无需更改，因为 "make_header" 在输入字符串中未显
+  式包含空白字符时，仍会继续在 "ASCII" 和非 "ASCII" 部分之间添加空白符
+  。
+
+* "email.utils.formataddr()" 现在在传递非 "ASCII" 显示名称时执行正确的
+  内容传输编码。任何依赖于以前错误行为（在格式化的输出字符串中保留非
+  "ASCII" unicode）的代码都需要更改 (bpo-1690608)。
+
+* "poplib.POP3.quit()" 现在可能会像所有其他 "poplib" 方法一样引发协议
+  错误。假设 "quit" 不引发 "poplib.error_proto" 错误的代码，如果特定应
+  用程序在 "quit" 时遇到错误，可能需要更改 (bpo-11291)。
+
+* 自 Python 2.4 起被弃用的 "email.parser.Parser" 的 "strict" 参数已被
+  最终移除。
+
+* 已被弃用的方法 "unittest.TestCase.assertSameElements" 已被移除。
+
+* 已被弃用的变量 "time.accept2dyear" 已被移除。
+
+* 已被弃用的 "Context._clamp" 属性已从 "decimal" 模块中移除。 在此之前
+  它已被公有属性 "clamp" 取代。 （参见 bpo-8540。）
+
+* 未记录的内部辅助类 "SSLFakeFile" 已从 "smtplib" 中移除，因为其功能早
+  已直接由 "socket.socket.makefile()" 提供。
+
+* 在 Windows 上向 "time.sleep()" 传递负值现在会引发错误，而不是永远休
+  眠。在 POSIX 上它一直会引发错误。
+
+* "ast.__version__" 常量已被移除。如果需要根据 AST 版本做出决策，请使
+  用 "sys.version_info" 来进行决策。
+
+* 过去那些通过继承私有类来绕过 "threading" 模块使用工厂函数限制的代码
+  ，现在需要调整为继承新公开的类。
+
+* threading 模块中未记录的调试机制已被移除，简化了代码。这对生产代码应
+  无影响，但在此提及以防有应用程序调试框架与其交互 (bpo-13550)。
+
+
+移植 C 代码
+-----------
+
+* 在改用缓冲区 API 的过程中未写入文档的 "Py_buffer" 结构体成员
+  "smalltable" 已被移除而 "PyMemoryViewObject" 的布局已发生变化。
+
+  所有依赖于 "memoryobject.h" 或 "object.h" 中相关部分的扩展必须重新构
+  建。
+
+* 由于 PEP 393，"Py_UNICODE" 类型及所有使用此类型的功能已被弃用（但至
+  少在未来五年内仍将可用）。如果您曾使用低级 Unicode API 来构造和访问
+  Unicode 对象，并希望受益于 **PEP 393** 提供的内存占用减少，您必须将
+  代码转换为新的 Unicode API。
+
+  然而，如果您仅使用过高级函数如 "PyUnicode_Concat()"、
+  "PyUnicode_Join()" 或 "PyUnicode_FromFormat()"，您的代码将自动利用新
+  的 Unicode 表示形式。
+
+* "PyImport_GetMagicNumber()" 在失败时现在返回 "-1"。
+
+* 由于 *level* 参数的负值对 "__import__()" 已不再有效，同样的情况现在
+  也适用于 "PyImport_ImportModuleLevel()"。这也意味着
+  "PyImport_ImportModuleEx()" 使用的 *level* 值现在是 "0" 而不是 "-1"
+  。
+
+
+构建 C 扩展
+-----------
+
+* C 扩展的可能文件名范围已经缩小。非常少用的拼写已被抑制：在 POSIX 下
+  ，名为 "xxxmodule.so"、"xxxmodule.abi3.so" 和
+  "xxxmodule.cpython-*.so" 的文件不再被识别为实现了 "xxx" 模块。如果你
+  之前生成了这样的文件，你必须切换到其他拼写（即，从文件名中移除
+  "module" 字符串）。
+
+  （在 bpo-14040 中实现。）
+
+
+命令行开关的变化
+----------------
+
+* 删除了 -Q命令行旗标和相关工具。 检查 sys.flags.division_warning 的代
+  码需要更新。
+
+  （由 Éric Araujo 在 bpo-10998 中贡献。）
+
+* 当 **python** 附带 "-S" 启动时，"import site" 将不再向模块搜索路径添
+  加 site 专属路径。 在之前版本中则会这样做。
+
+  （由 Carl Meyer 在 bpo-11591 中贡献并由 Éric Araujo 进行修改。）

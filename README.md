@@ -7,7 +7,7 @@
 ## 核心特性
 
 - **版本敏感检索**：官方文档按 `technology + version` 硬性过滤，绝不跨版本返回结果；知识库中没有证据时明确标注 `llm_inference`，不伪造官方依据
-- **绝不猜测版本**：只读依赖文件识别版本；精确锁定（`==`、锁文件）直接采用，范围约束（`>=`、`^`、`~`）必须由用户确认后才允许审查
+- **绝不猜测版本**：只读依赖文件识别版本；精确锁定（`==`、锁文件）直接采用，范围约束（`>=`、`^`、`~`）必须由用户确认后才允许审查；无依赖文件时可手动指定技术与版本，也可不提供任何版本直接审查（降级为安全规范 + 模型自身知识，依据标注 `llm_inference`）
 - **Code Review**：单 Agent 动态调用只读工具收集上下文，输出 Pydantic 强约束的结构化问题列表（文件 / 行号 / 类别 / 严重级别 / 置信度 / 证据 / 建议）
 - **Migration**：同一引擎对比两个版本的规范，产出「当前行为 → 目标行为」的迁移调整点
 - **Fix Prompt**：每个问题与项目级汇总均由模板确定性生成（不再调 LLM），可直接粘贴给 AI Coding 工具
@@ -112,7 +112,7 @@ npm run dev
 
 ## 使用流程
 
-1. **上传**：选择项目 zip（≤50MB）上传，页面展示语言 / 依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例
+1. **上传**：两种方式任选——项目 zip（≤50MB），或切换到「直接上传文件」选择多个源码/配置文件（.py、.js、requirements.txt 等，最多 200 个）。页面展示语言 / 依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例
 2. **版本确认**：精确锁定的版本自动采用；范围约束标记为「待确认」，需手动填写并确认。所有技术确认前审查按钮保持禁用
 3. **选择模式并开始**：
    - Code Review：直接点「开始审查」
@@ -128,10 +128,13 @@ npm run dev
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/version` | 应用版本 |
 | POST | `/api/projects/upload` | 上传项目 zip，返回结构分析与版本识别 |
+| POST | `/api/projects/upload-files` | 直接上传多个源码/配置文件（无需打包，白名单扩展名） |
 | GET | `/api/projects/{project_id}` | 查询项目分析结果 |
 | POST | `/api/projects/{project_id}/versions` | 确认 / 覆盖技术版本 |
 | POST | `/api/knowledge/ingest` | 扫描 knowledge/ 并全量入库 Qdrant |
-| POST | `/api/knowledge/documents` | 上传知识文档（指定 technology/version）并即时入库 |
+| POST | `/api/knowledge/documents` | 上传知识文档（.md/.txt/.rst 或 .zip 压缩包，指定 technology/version）并即时入库 |
+| DELETE | `/api/knowledge/documents` | 删除知识文档（同时移除本地文件与 Qdrant 分块） |
+| GET | `/api/knowledge/catalog` | 查看本地已有规范文档清单（按技术/版本分组，附入库分块数） |
 | GET | `/api/knowledge/search` | 版本敏感的官方文档检索（technology + version 必填） |
 | GET | `/api/knowledge/search/security` | 安全规范语义检索 |
 | POST | `/api/reviews` | 创建并同步执行 Code Review |
@@ -143,7 +146,7 @@ npm run dev
 
 ## 安全边界
 
-- 上传：路径穿越防护、防 zip 炸弹、大小限制，自动跳过 `.env` / `node_modules` 等
+- 上传：路径穿越防护、防 zip 炸弹、大小限制，自动跳过 `.env` / `node_modules` 等；直接上传文件模式用扩展名白名单拒收二进制文件
 - Agent 工具全部只读，且限制在项目目录内；官方文档检索强制使用已确认版本，传入未确认版本直接拒绝
 - 证据规则：问题依据必须来自检索结果，无证据时标注 `llm_inference`，禁止伪造官方文档依据
 

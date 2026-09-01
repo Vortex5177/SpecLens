@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import KnowledgeCatalog from "./components/KnowledgeCatalog.jsx";
 import ProjectInfo from "./components/ProjectInfo.jsx";
 import ReviewPanel from "./components/ReviewPanel.jsx";
 import ReviewResult from "./components/ReviewResult.jsx";
@@ -65,6 +66,7 @@ function App() {
       {status === "connected" && (
         <>
           <UploadSection onUploaded={handleUploaded} />
+          <KnowledgeCatalog />
           {uploadResult && (
             <ProjectInfo
               analysis={uploadResult.analysis}

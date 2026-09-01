@@ -1,0 +1,1388 @@
+Python 2.4 有什么新变化
+***********************
+
+作者:
+   A.M. Kuchling
+
+本文介绍了2005年3月30日发布的 Python 2.4.1 的新功能。
+
+Python 2.4 是一个中等规模的发布版。 它引入的变化没有激进的 Python 2.2
+那么多，但比保守的 2.3 发布版引入了更多的特性。 最主要的新语言特性是函
+数装饰器和生成器表达式；其他大部分改动都是针对标准库。
+
+根据 CVS 变更日志，Python 2.3 和 2.4 之间共应用了 481 个补丁并修复了
+502 个错误。 这两个数字可能都被低估了。
+
+本文并不试图提供每一个新特性的完整规范说明，而是对每个特性进行简要的介
+绍。 要了解完整细节，你应该参考 Python 2.4 的文档，如 Python 库参考和
+Python 参考手册等。 通常你需要参阅特定新特性的 PEP 以了解有关具体实现
+和设计原理的说明。
+
+
+PEP 218: 内置集合对象
+=====================
+
+Python 2.3 introduced the "sets" module.  C implementations of set
+data types have now been added to the Python core as two new built-in
+types, "set(iterable)" and "frozenset(iterable)".  They provide high
+speed operations for membership testing, for eliminating duplicates
+from sequences, and for mathematical operations like unions,
+intersections, differences, and symmetric differences.
+
+   >>> a = set('abracadabra')              # 从字符串形成集合
+   >>> 'z' in a                            # 快速成员测试
+   False
+   >>> a                                   # a中的唯一字母
+   set(['a', 'r', 'b', 'c', 'd'])
+   >>> ''.join(a)                          # 转换回字符串
+   'arbcd'
+
+   >>> b = set('alacazam')                 # 形成第二个集合
+   >>> a - b                               # 在a中但不在b中的字母
+   set(['r', 'd', 'b'])
+   >>> a | b                               # 在a或b中的字母
+   set(['a', 'c', 'r', 'd', 'b', 'm', 'z', 'l'])
+   >>> a & b                               # 在a和b中的字母
+   set(['a', 'c'])
+   >>> a ^ b                               # 在a或b中但不在两者中的字母
+   set(['r', 'd', 'b', 'm', 'z', 'l'])
+
+   >>> a.add('z')                          # 添加新元素
+   >>> a.update('wxy')                     # 添加多个新元素
+   >>> a
+   set(['a', 'c', 'b', 'd', 'r', 'w', 'y', 'x', 'z'])
+   >>> a.remove('x')                       # 移除一个元素
+   >>> a
+   set(['a', 'c', 'b', 'd', 'r', 'w', 'y', 'z'])
+
+"frozenset()" 类型是 "set()" 的不可变版本。 由于它是不可变且可哈希的，
+因而可被用作字典的键或另一个集合的成员。
+
+The "sets" module remains in the standard library, and may be useful
+if you wish to subclass the "Set" or "ImmutableSet" classes.  There
+are currently no plans to deprecate the module.
+
+参见:
+
+  **PEP 218** - 添加内置Set对象类型
+     最初由 Greg Wilson 提出，由 Raymond Hettinger 最终实现。
+
+
+PEP 237: 统一长整数和整数
+=========================
+
+这个PEP的漫长过渡过程始于Python 2.2，在Python 2.4中又向前迈出了一步。
+在2.3中，某些在int/long统一后行为不同的整数操作会触发 "FutureWarning"
+警告，并返回限于32位或64位（取决于您的平台）的值。在2.4中，这些表达式
+不再产生警告，而是产生一个通常为长整数的不同结果。
+
+问题表达式主要是左移和长十六进制和八进制常量。例如，"2 << 32" 在2.3中
+会引发警告，在32位平台上评估为0。在Python 2.4中，这个表达式现在返回正
+确答案，8589934592。
+
+参见:
+
+  **PEP 237** - 统一长整数和整数
+     原始PEP由 Moshe Zadka 和 GvR 撰写，2.4 的变更由 Kalle Svensson 实
+     现。
+
+
+PEP 289: 生成器表达式
+=====================
+
+Python 2.2中引入的迭代器特性和 "itertools" 模块使得编写循环遍历大数据
+集的程序变得更加容易，而无需将整个数据集一次性加载到内存中。列表推导式
+并不很适合这种场景，因为它们会产生一个包含所有项的Python列表对象。这不
+可避免地将所有对象拉入内存，如果数据集非常大，这可能会成为问题。当尝试
+编写函数式风格的程序时，自然会写出类似以下代码：
+
+   links = [link for link in get_all_links() if not link.followed]
+   for link in links:
+       ...
+
+代替：
+
+   for link in get_all_links():
+       if link.followed:
+           continue
+       ...
+
+第一种形式更简洁，可能也更易读，但如果你正在处理大量的链接对象，为了避
+免同时将所有链接对象加载到内存中，你将不得不编写第二种形式。
+
+生成器表达式的工作方式类似于列表推导式，但不生成整个列表；相反，它们创
+建一个生成器，逐个返回元素。上述示例可以改写为：
+
+   links = (link for link in get_all_links() if not link.followed)
+   for link in links:
+       ...
+
+生成器表达式必须像上述示例那样写在括号内。函数调用所用的括号也算在内，
+因此如果你想要创建一个将立即传递给函数的迭代器，可以写成：
+
+   print sum(obj.count for obj in list_all_objects())
+
+生成器表达式与列表推导式在各方面有细微的不同。最显著的是，循环变量（上
+述示例中的*obj*）在生成器表达式外部是不可访问的。列表推导式会将变量赋
+值为最后一个值；Python的未来版本将改变这一点，使列表推导式在这方面与生
+成器表达式一致。
+
+参见:
+
+  **PEP 289** - 生成器表达式
+     由Raymond Hettinger提出，Jiwon Seo实现，Hye-Shik Chang在早期进行
+     了指导。
+
+
+PEP 292: 更简单的字符串替换
+===========================
+
+标准库中的一些新类提供了将变量替换到字符串中的替代机制；这种替换风格可
+能更适合那些未经训练的用户需要编辑模板的应用程序。
+
+按名称替换变量的常用方式是 "%" 运算符:
+
+   >>> '%(page)i: %(title)s' % {'page':2, 'title': 'The Best of Times'}
+   '2: The Best of Times'
+
+在编写模板字符串时，很容易忘记在闭合括号后加上 "i" 或 "s"。如果模板在
+Python 模块中，这并不是一个大问题，因为你可以运行代码，得到一个“不支持
+的格式字符” "ValueError"，然后修复这个问题。然而，考虑像 Mailman 这样
+的应用程序，其中模板字符串或翻译是由不了解 Python 语言的用户编辑的。向
+这些用户解释格式字符串的语法是很复杂的，如果他们犯了错误，很难向他们提
+供有用的反馈。
+
+PEP 292 adds a "Template" class to the "string" module that uses "$"
+to indicate a substitution:
+
+   >>> import string
+   >>> t = string.Template('$page: $title')
+   >>> t.substitute({'page':2, 'title': 'The Best of Times'})
+   '2: The Best of Times'
+
+If a key is missing from the dictionary, the "substitute()" method
+will raise a "KeyError".  There's also a "safe_substitute()" method
+that ignores missing keys:
+
+   >>> t = string.Template('$page: $title')
+   >>> t.safe_substitute({'page':3})
+   '3: $title'
+
+参见:
+
+  **PEP 292** - 更简单的字符串替换
+     由 Barry Warsaw 撰写并实现。
+
+
+PEP 318: 函数和方法的装饰器
+===========================
+
+Python 2.2 通过添加静态方法和类方法扩展了 Python 的对象模型，但它并没
+有扩展 Python 的语法来提供任何定义静态方法或类方法的新方式。相反，你必
+须以通常的方式编写一个 "def" 语句，并将生成的函数传递给一个
+"staticmethod()" 或 "classmethod()" 函数，该函数会将函数包装成新类型的
+方法。你的代码会像这样:
+
+   class C:
+      def meth (cls):
+          ...
+
+      meth = classmethod(meth)   # 将名称重新绑定到包装后的类方法
+
+如果方法非常长，很容易错过或忘记在函数体后调用 "classmethod()"。
+
+初衷一直是添加一些语法来使这样的定义更易读，但在 2.2 发布时，一个好的
+语法并不明显。今天，一个好的语法 *仍然* 不明显，但用户希望更方便地访问
+这个特性；为了满足这一需求，添加了一个新的语法特性。
+
+这个新特性被称为“函数装饰器”。这个名字源于 "classmethod()"、
+"staticmethod()" 及其同类函数在函数对象上存储额外信息的想法；它们在用
+更多细节 *装饰* 函数。
+
+这种表示法借鉴了 Java，并使用 "'@'" 字符作为指示符。使用新语法，上面的
+例子会写成:
+
+   class C:
+
+      @classmethod
+      def meth (cls):
+          ...
+
+"@classmethod" 是 "meth=classmethod(meth)" 赋值的简写。更一般地，如果
+你有以下代码：
+
+   @A
+   @B
+   @C
+   def f ():
+       ...
+
+它等价于以下无装饰器的代码:
+
+   def f(): ...
+   f = A(B(C(f)))
+
+装饰器必须放在函数定义的前一行，每行一个装饰器，不能与 def 语句在同一
+行，这意味着 "@A def f(): ..." 是非法的。你只能装饰模块级别或类内部的
+函数定义；不能装饰类定义。
+
+装饰器只是一个函数，它接受要装饰的函数作为参数，并返回相同的函数或某个
+新对象。装饰器的返回值不一定是可调用的（尽管通常是这样），除非将进一步
+应用装饰器到结果上。编写自己的装饰器很容易。以下简单示例只是在函数对象
+上设置一个属性：
+
+   >>> def deco(func):
+   ...    func.attr = 'decorated'
+   ...    return func
+   ...
+   >>> @deco
+   ... def f(): pass
+   ...
+   >>> f
+   <function f at 0x402ef0d4>
+   >>> f.attr
+   'decorated'
+   >>>
+
+作为一个稍微更现实的例子，以下装饰器检查提供的参数是否为整数：
+
+   def require_int (func):
+       def wrapper (arg):
+           assert isinstance(arg, int)
+           return func(arg)
+
+       return wrapper
+
+   @require_int
+   def p1 (arg):
+       print arg
+
+   @require_int
+   def p2(arg):
+       print arg*2
+
+在 **PEP 318** 中的一个示例包含了一个更复杂的版本，它允许你同时指定所
+需类型并检查返回类型。
+
+装饰器函数可以接受参数。如果提供了参数，你的装饰器函数仅用这些参数调用
+，并且必须返回一个新的装饰器函数；这个函数必须接受单个函数并返回一个函
+数，如前所述。换句话说，"@A @B @C(args)" 变为：
+
+   def f(): ...
+   _deco = C(args)
+   f = A(B(_deco(f)))
+
+理解这一点可能有点费脑筋，但并不太困难。
+
+一个小相关的更改使得函数的 "func_name" 属性可写。此属性用于在跟踪信息
+中显示函数名称，因此装饰器应更改任何新构造并返回的函数的名称。
+
+参见:
+
+  **PEP 318** - 函数、方法和类的装饰器
+     由 Kevin D. Smith、Jim Jewett 和 Skip Montanaro 编写。有几个人编
+     写了实现函数装饰器的补丁，但实际被合并的是补丁 #979728，由 Mark
+     Russell 编写。
+
+  https://wiki.python.org/moin/PythonDecoratorLibrary
+     该Wiki页面包含几个装饰器示例。
+
+
+PEP 322: 反向迭代
+=================
+
+一个新的内置函数 "reversed(seq)"，接受一个序列并返回一个以相反顺序遍历
+序列元素的迭代器。
+
+   >>> for i in reversed(xrange(1,4)):
+   ...    print i
+   ...
+   3
+   2
+   1
+
+与扩展切片，如 "range(1,4)[::-1]" 相比，"reversed()" 更易读，运行更快
+，且显著减少内存使用。
+
+请注意，"reversed()" 只接受序列，不接受任意迭代器。如果你想反转一个迭
+代器，首先使用 "list()" 将其转换为列表。
+
+   >>> input = open('/etc/passwd', 'r')
+   >>> for line in reversed(list(input)):
+   ...   print line
+   ...
+   root:*:0:0:System Administrator:/var/root:/bin/tcsh
+     ...
+
+参见:
+
+  **PEP 322** - 反向迭代
+     由 Raymond Hettinger 撰写并实现。
+
+
+PEP 324: 新的子进程模块
+=======================
+
+标准库提供了多种执行子进程的方式，提供不同的功能和不同的复杂度。
+"os.system(command)" 使用简单，但速度慢（它运行一个 shell 进程来执行命
+令）且存在风险（你必须小心处理 shell 的元字符转义）。"popen2" 模块提供
+可以捕获子进程标准输出和标准错误的类，但命名令人困惑。"subprocess" 模
+块对此进行了清理，提供了一个统一的接口，提供了你可能需要的所有功能。
+
+与 "popen2" 的一系列类不同，"subprocess" 包含一个名为
+"subprocess.Popen" 的单一类，其构造函数支持多种不同的关键字参数。
+
+   class Popen(args, bufsize=0, executable=None,
+               stdin=None, stdout=None, stderr=None,
+               preexec_fn=None, close_fds=False, shell=False,
+               cwd=None, env=None, universal_newlines=False,
+               startupinfo=None, creationflags=0):
+
+*args* 通常是一个字符串序列，用作子进程要执行的程序的参数。 (如果
+*shell* 参数为真，*args* 可以是一个字符串，然后会传递给 shell 进行解释
+，就像 "os.system()" 所做的那样。)
+
+*stdin*、*stdout* 和 *stderr* 指定子进程的输入、输出和错误流将会是什么
+。 你可以提供一个文件对象或文件描述符，或者你可以使用常量
+"subprocess.PIPE" 来在子进程和父进程之间创建一个管道。
+
+此构造器有几个方便的选项:
+
+* *close_fds* 将在运行子进程之前请求关闭所有文件描述符。
+
+* *cwd* 指定执行子进程将使用的工作目录（默认为父进程的工作目录）。
+
+* *env* 是一个指定环境变量的字典。
+
+* *preexec_fn* 是将在子进程启动之前被调用的函数。
+
+* *universal_newlines* 使用 Python 的 *universal newlines* 特性打开子
+  进程的输入和输出。
+
+Once you've created the "Popen" instance, you can call its "wait()"
+method to pause until the subprocess has exited, "poll()" to check if
+it's exited without pausing,  or "communicate(data)" to send the
+string *data* to the subprocess's standard input.
+"communicate(data)"  then reads any data that the subprocess has sent
+to its standard output  or standard error, returning a tuple
+"(stdout_data, stderr_data)".
+
+"call()" is a shortcut that passes its arguments along to the "Popen"
+constructor, waits for the command to complete, and returns the status
+code of the subprocess.  It can serve as a safer analog to
+"os.system()":
+
+   sts = subprocess.call(['dpkg', '-i', '/tmp/new-package.deb'])
+   if sts == 0:
+       # 成功
+       ...
+   else:
+       # dpkg 返回错误
+       ...
+
+命令在不使用 shell 的情况下被调用。 如果你确实想使用 shell，你可以添加
+"shell=True" 作为关键字参数，并提供一个字符串而不是序列:
+
+   sts = subprocess.call('dpkg -i /tmp/new-package.deb', shell=True)
+
+PEP 提供了各种 shell 和 Python 代码示例，并展示了它们如何被翻译成使用
+"subprocess" 的 Python 代码。强烈建议阅读 PEP 的这一部分。
+
+参见:
+
+  **PEP 324** - 子进程 - 新的进程模块
+     由 Peter Åstrand 在 Fredrik Lundh 等人的协助下撰写并实现。
+
+
+PEP 327: 十进制数据类型
+=======================
+
+Python has always supported floating-point (FP) numbers, based on the
+underlying C double type, as a data type.  However, while most
+programming languages provide a floating-point type, many people (even
+programmers) are unaware that floating-point numbers don't represent
+certain decimal fractions accurately.  The new "Decimal" type can
+represent these fractions accurately, up to a user-specified precision
+limit.
+
+
+为什么需要十进制？
+------------------
+
+这些限制源于浮点数的表示方式。FP 数由三个部分组成：
+
+* 符号，可以是正或负。
+
+* 尾数，是一个单数字的二进制数后跟一个小数部分。例如，二进制表示的
+  "1.01" 是 "1 + 0/2 + 1/4"，即十进制表示的 1.25。
+
+* 指数，指示数字表示中十进制点的位置。
+
+例如，数字 1.25 具有正符号，尾数值为 1.01（二进制），指数为 0（十进制
+点不需要移动）。数字 5 具有相同的符号和尾数，但指数为 2，因为尾数乘以
+4（2 的指数 2 次方）；1.25 * 4 等于 5。
+
+现代系统通常提供符合IEEE 754标准的浮点支持。C语言的 double 类型通常被
+实现为64位的IEEE 754数字，其中使用52位空间来存储尾数。这意味着数字只能
+精确到52位。如果你试图表示那些展开后会无限重复的数字，其展开会在52位后
+截断。不幸的是，大多数软件需要以十进制输出，而十进制中的常见分数在二进
+制中往往是无限循环小数。例如，十进制的1.1在二进制中是``1.0001100110011
+...``；0.1 = 1/16 + 1/32 + 1/256加上无限多个额外项。IEEE 754必须在52位
+后截断这个无限重复的小数，因此表示略有误差。
+
+有时在打印数字时可以看到这种不准确性：
+
+   >>> 1.1
+   1.1000000000000001
+
+这种不准确性在打印数字时不总是可见，因为浮点数到十进制字符串的转换由C
+库提供，大多数C库会尝试生成合理的输出。即使没有显示出来，不准确性仍然
+存在，后续操作可能会放大这个误差。
+
+对于许多应用来说，这并不重要。如果我在绘制点并在显示器上显示它们，1.1
+和1.1000000000000001之间的差异太小，无法察觉。报告通常限制输出到一定的
+小数位数，如果你将数字四舍五入到两位、三位甚至八位小数，误差永远不会显
+现。然而，对于确实重要的应用，实现自己的自定义算术例程是一项大量工作。
+
+Hence, the "Decimal" type was created.
+
+
+The "Decimal" type
+------------------
+
+A new module, "decimal", was added to Python's standard library.  It
+contains two classes, "Decimal" and "Context".  "Decimal" instances
+represent numbers, and "Context" instances are used to wrap up various
+settings such as the precision and default rounding mode.
+
+"Decimal" instances are immutable, like regular Python integers and FP
+numbers; once it's been created, you can't change the value an
+instance represents.  "Decimal" instances can be created from integers
+or strings:
+
+   >>> import decimal
+   >>> decimal.Decimal(1972)
+   Decimal("1972")
+   >>> decimal.Decimal("1.1")
+   Decimal("1.1")
+
+你也可以提供包含符号、以十进制数字元组表示的尾数和指数的元组：
+
+   >>> decimal.Decimal((1, (1, 4, 7, 5), -2))
+   Decimal("-14.75")
+
+注意事项：符号位是一个布尔值，所以 0 表示正数，1 表示负数。
+
+Converting from floating-point numbers poses a bit of a problem:
+should the FP number representing 1.1 turn into the decimal number for
+exactly 1.1, or for 1.1 plus whatever inaccuracies are introduced? The
+decision was to dodge the issue and leave such a conversion out of the
+API.  Instead, you should convert the floating-point number into a
+string using the desired precision and pass the string to the
+"Decimal" constructor:
+
+   >>> f = 1.1
+   >>> decimal.Decimal(str(f))
+   Decimal("1.1")
+   >>> decimal.Decimal('%.12f' % f)
+   Decimal("1.100000000000")
+
+Once you have "Decimal" instances, you can perform the usual
+mathematical operations on them.  One limitation: exponentiation
+requires an integer exponent:
+
+   >>> a = decimal.Decimal('35.72')
+   >>> b = decimal.Decimal('1.73')
+   >>> a+b
+   Decimal("37.45")
+   >>> a-b
+   Decimal("33.99")
+   >>> a*b
+   Decimal("61.7956")
+   >>> a/b
+   Decimal("20.64739884393063583815028902")
+   >>> a ** 2
+   Decimal("1275.9184")
+   >>> a**b
+   Traceback (most recent call last):
+     ...
+   decimal.InvalidOperation: x ** (非整数)
+
+You can combine "Decimal" instances with integers, but not with
+floating-point numbers:
+
+   >>> a + 4
+   Decimal("39.72")
+   >>> a + 4.5
+   Traceback (most recent call last):
+     ...
+   TypeError: 你只能用 int, long 或 Decimal 数据类型与 Decimal 交互。
+   >>>
+
+"Decimal" numbers can be used with the "math" and "cmath" modules, but
+note that they'll be immediately converted to  floating-point numbers
+before the operation is performed, resulting in a possible loss of
+precision and accuracy.  You'll also get back a regular floating-point
+number and not a "Decimal".
+
+   >>> import math, cmath
+   >>> d = decimal.Decimal('123456789012.345')
+   >>> math.sqrt(d)
+   351364.18288201344
+   >>> cmath.sqrt(-d)
+   351364.18288201344j
+
+"Decimal" instances have a "sqrt()" method that returns a "Decimal",
+but if you need other things such as trigonometric functions you'll
+have to implement them.
+
+   >>> d.sqrt()
+   Decimal("351364.1828820134592177245001")
+
+
+The "Context" type
+------------------
+
+Instances of the "Context" class encapsulate several settings for
+decimal operations:
+
+* "prec" is the precision, the number of decimal places.
+
+* "rounding" specifies the rounding mode.  The "decimal" module has
+  constants for the various possibilities: "ROUND_DOWN",
+  "ROUND_CEILING", "ROUND_HALF_EVEN", and various others.
+
+* "traps" is a dictionary specifying what happens on encountering
+  certain error conditions: either  an exception is raised or  a value
+  is returned.  Some examples of error conditions are division by
+  zero, loss of precision, and overflow.
+
+There's a thread-local default context available by calling
+"getcontext()"; you can change the properties of this context to alter
+the default precision, rounding, or trap handling.  The following
+example shows the effect of changing the precision of the default
+context:
+
+   >>> decimal.getcontext().prec
+   28
+   >>> decimal.Decimal(1) / decimal.Decimal(7)
+   Decimal("0.1428571428571428571428571429")
+   >>> decimal.getcontext().prec = 9
+   >>> decimal.Decimal(1) / decimal.Decimal(7)
+   Decimal("0.142857143")
+
+错误条件的默认行为是可选择的；模块可以返回特殊值，如无穷大或非数字，或
+者可以抛出异常:
+
+   >>> decimal.Decimal(1) / decimal.Decimal(0)
+   Traceback (most recent call last):
+     ...
+   decimal.DivisionByZero: x / 0
+   >>> decimal.getcontext().traps[decimal.DivisionByZero] = False
+   >>> decimal.Decimal(1) / decimal.Decimal(0)
+   Decimal("Infinity")
+   >>>
+
+The "Context" instance also has various methods for formatting numbers
+such as "to_eng_string()" and "to_sci_string()".
+
+更多信息请参阅 "decimal" 模块的文档，其中包含快速入门教程和参考手册。
+
+参见:
+
+  **PEP 327** - 十进数据类型
+     由 Facundo Batista 撰写，由Facundo Batista, Eric Price, Raymond
+     Hettinger, Aahz 和 Tim Peters 实现。
+
+  http://www.lahey.com/float.htm
+     该文章使用 Fortran 代码演示了浮点精度问题可能导致的许多问题。
+
+  https://speleotrove.com/decimal/
+     描述了一种基于十进制的表示法。这种表示法已被提议作为标准，并且是
+     新的 Python decimal 类型的基础。大部分内容由 Rexx 语言的设计者
+     Mike Cowlishaw 撰写。
+
+
+PEP 328: 多行导入
+=================
+
+一个语言改动是针对从模块中导入多个名称的小语法调整。在 "from module
+import names" 语句中，*names* 是由逗号分隔的名称序列。如果序列非常长，
+您可以要么从同一模块多次导入，要么使用反斜杠转义行尾，如下所示:
+
+   from SimpleXMLRPCServer import SimpleXMLRPCServer,\
+               SimpleXMLRPCRequestHandler,\
+               CGIXMLRPCRequestHandler,\
+               resolve_dotted_attribute
+
+Python 2.4 中的语法改动允许将名称放在括号内。Python 忽略括号表达式中的
+换行符，因此不再需要反斜杠:
+
+   from SimpleXMLRPCServer import (SimpleXMLRPCServer,
+                                   SimpleXMLRPCRequestHandler,
+                                   CGIXMLRPCRequestHandler,
+                                   resolve_dotted_attribute)
+
+PEP还提议所有 "import" 语句应为绝对导入，使用前导的 "." 字符表示相对导
+入。这部分PEP在Python 2.4中未实现，但在Python 2.5中完成了。
+
+参见:
+
+  **PEP 328** - 导入：多行和绝对/相对导入
+     由 Aahz 撰写，多行导入由 Dima Dorfman 实现。
+
+
+PEP 331: 与区域设置无关的浮点数/字符串转换
+==========================================
+
+The "locale" modules lets Python software select various conversions
+and display conventions that are localized to a particular country or
+language. However, the module was careful to not change the numeric
+locale because various functions in Python's implementation required
+that the numeric locale remain set to the "'C'" locale.  Often this
+was because the code was using the C library's "atof()" function.
+
+不设置数字区域设置给使用第三方C库的扩展带来了麻烦，因为它们不会有正确
+的区域设置。动机示例是GTK+，其用户界面小部件未在当前区域显示数字。
+
+PEP中描述的解决方案是在Python API中添加三个新函数，执行仅ASCII的转换，
+忽略区域设置：
+
+* "PyOS_ascii_strtod(str, ptr)" 和 "PyOS_ascii_atof(str, ptr)" 都将字
+  符串转换为C double。
+
+* "PyOS_ascii_formatd(buffer, buf_len, format, d)" 将 double 转换为
+  ASCII字符串。
+
+这些函数的代码来自GLib库 (https://developer-old.gnome.org/glib/2.26/)
+，其开发者友好地重新许可了相关函数并捐赠给Python软件基金会。 "locale"
+模块现在可以更改数字区域设置，让诸如 GTK+ 之类的扩展产生正确的结果。
+
+参见:
+
+  **PEP 331** - 与区域设置无关的浮点数/字符串转换
+     由Christian R. Reis撰写，由 Gustavo Carneiro 实现。
+
+
+其他语言特性修改
+================
+
+以下是 Python 2.4 针对核心 Python 语言的所有改变。
+
+* 增加了用于函数和方法的装饰器 (**PEP 318**)。
+
+* 内置的 "set()" 和 "frozenset()" 类型被添加 (**PEP 218**)。 其他新内
+  置函数包括 "reversed(seq)" 函数 (**PEP 322**)。
+
+* 增加了生成器表达式 (**PEP 289**)。
+
+* 某些数值表达式不再返回限于32位或64位的结果 (**PEP 237**)。
+
+* 现在可以在 *from module import names* 语句中的名称列表周围加上括号
+  (**PEP 328**)。
+
+* "dict.update()" 方法现在接受与 "dict" 构造函数相同的参数形式。这包括
+  任何映射、任何键/值对的迭代器以及关键字参数。（由 Raymond Hettinger
+  贡献。）
+
+* The string methods "ljust()", "rjust()", and "center()" now take an
+  optional argument for specifying a fill character other than a
+  space. (Contributed by Raymond Hettinger.)
+
+* Strings also gained an "rsplit()" method that works like the
+  "split()" method but splits from the end of the string.
+  (Contributed by Sean Reifschneider.)
+
+     >>> 'www.python.org'.split('.', 1)
+     ['www', 'python.org']
+     'www.python.org'.rsplit('.', 1)
+     ['www.python', 'org']
+
+* Three keyword parameters, *cmp*, *key*, and *reverse*, were added to
+  the "sort()" method of lists. These parameters make some common
+  usages of "sort()" simpler. All of these parameters are optional.
+
+  For the *cmp* parameter, the value should be a comparison function
+  that takes two parameters and returns -1, 0, or +1 depending on how
+  the parameters compare. This function will then be used to sort the
+  list.  Previously this was the only parameter that could be provided
+  to "sort()".
+
+  *key* 应该是一个单参数函数，该函数接受一个列表元素并返回该元素的比较
+  键。然后使用比较键对列表进行排序。以下示例按不区分大小写的方式对列表
+  进行排序:
+
+     >>> L = ['A', 'b', 'c', 'D']
+     >>> L.sort()                 # 区分大小写的排序
+     >>> L
+     ['A', 'D', 'b', 'c']
+     >>> # 使用 'key' 参数对列表进行排序
+     >>> L.sort(key=lambda x: x.lower())
+     >>> L
+     ['A', 'b', 'c', 'D']
+     >>> # 旧式方法
+     >>> L.sort(cmp=lambda x,y: cmp(x.lower(), y.lower()))
+     >>> L
+     ['A', 'b', 'c', 'D']
+
+  The last example, which uses the *cmp* parameter, is the old way to
+  perform a case-insensitive sort.  It works but is slower than using
+  a *key* parameter. Using *key* calls "lower()" method once for each
+  element in the list while using *cmp* will call it twice for each
+  comparison, so using *key* saves on invocations of the "lower()"
+  method.
+
+  对于简单的键函数和比较函数，通常可以通过使用未绑定方法来避免使用
+  "lambda" 表达式。例如，上述不区分大小写的排序最好写成：
+
+     >>> L.sort(key=str.lower)
+     >>> L
+     ['A', 'b', 'c', 'D']
+
+  最后，*reverse* 参数接受一个布尔值。如果值为真，列表将按逆序排序。现
+  在你可以用 "L.sort(reverse=True)" 替代 "L.sort(); L.reverse()"。
+
+  排序结果现在保证是稳定的。这意味着具有相同键的两个条目将按照它们输入
+  的顺序返回。例如，你可以先按名字对人员列表进行排序，然后再按年龄排序
+  ，结果是一个按年龄排序的列表，其中同年龄的人员按名字排序。
+
+  (All changes to "sort()" contributed by Raymond Hettinger.)
+
+* 有一个新的内置函数 "sorted(iterable)"，它类似于原地 "list.sort()" 方
+  法，但可以在表达式中使用。区别在于：
+
+* 输入可以是任意可迭代对象;
+
+* 新生成的副本被排序，原始列表保持不变；以及
+
+* 表达式返回新的已排序副本
+
+     >>> L = [9,7,8,3,2,4,1,6,5]
+     >>> [10+i for i in sorted(L)]       # 可用于列表推导
+     [11, 12, 13, 14, 15, 16, 17, 18, 19]
+     >>> L                               # 原列表保持不变
+     [9,7,8,3,2,4,1,6,5]
+     >>> sorted('Monty Python')          # 任何可迭代对象都可以作为输入
+     [' ', 'M', 'P', 'h', 'n', 'n', 'o', 'o', 't', 't', 'y', 'y']
+
+     >>> # 按键值排序并列出字典内容
+     >>> colormap = dict(red=1, blue=2, green=3, black=4, yellow=5)
+     >>> for k, v in sorted(colormap.iteritems()):
+     ...     print k, v
+     ...
+     black 4
+     blue 2
+     green 3
+     red 1
+     yellow 5
+
+  （由 Raymond Hettinger 贡献。）
+
+* Integer operations will no longer trigger an "OverflowWarning". The
+  "OverflowWarning" warning will disappear in Python 2.5.
+
+* 解释器新增了一个开关 "-m"，它接受一个名称，在 "sys.path" 上搜索相应
+  的模块，并将该模块作为脚本运行。例如，你现在可以使用 "python -m
+  profile" 运行 Python 分析器。（由 Nick Coghlan 贡献。）
+
+* "eval(expr, globals, locals)" 和 "execfile(filename, globals,
+  locals)" 函数以及 "exec" 语句现在接受任何映射类型作为 *locals* 参数
+  。以前这必须是一个普通的 Python 字典。（由 Raymond Hettinger 贡献。
+  ）
+
+* The "zip()" built-in function and "itertools.izip()" now return an
+  empty list if called with no arguments. Previously they raised a
+  "TypeError" exception.  This makes them more suitable for use with
+  variable length argument lists:
+
+     >>> def transpose(array):
+     ...    return zip(*array)
+     ...
+     >>> transpose([(1,2,3), (4,5,6)])
+     [(1, 4), (2, 5), (3, 6)]
+     >>> transpose([])
+     []
+
+  （由 Raymond Hettinger 贡献。）
+
+* 在导入模块时遇到失败将不再在 "sys.modules" 中留下部分初始化的模块对
+  象。留下的不完整模块对象会导致后续导入同一模块时误以为成功，进而引发
+  混淆的错误。（由 Tim Peters 修复。）
+
+* "None" 现在是一个常量；将一个新值绑定到名称 "None" 的代码现在会造成
+  语法错误。 （由 Raymond Hettinger 贡献。）
+
+
+性能优化
+--------
+
+* The inner loops for list and tuple slicing were optimized and now
+  run about one-third faster.  The inner loops for dictionaries were
+  also optimized, resulting in performance boosts for "keys()",
+  "values()", "items()", "iterkeys()", "itervalues()", and
+  "iteritems()". (Contributed by Raymond Hettinger.)
+
+* 用于列表增长和缩小的机制进行了速度和空间效率的优化。由于更高效的代码
+  路径和更少地使用底层系统 "realloc()"，向列表追加和弹出元素现在运行得
+  更快。列表推导也从中受益。"list.extend()" 也进行了优化，不再将其参数
+  转换为临时列表后再扩展基础列表。（由 Raymond Hettinger 贡献。）
+
+* "list()", "tuple()", "map()", "filter()", and "zip()" now run
+  several times faster with non-sequence arguments that supply a
+  "__len__()" method.  (Contributed by Raymond Hettinger.)
+
+* The methods "list.__getitem__()", "dict.__getitem__()", and
+  "dict.__contains__()" are now implemented as "method_descriptor"
+  objects rather than "wrapper_descriptor" objects.  This form of
+  access doubles their performance and makes them more suitable for
+  use as arguments to functionals: "map(mydict.__getitem__, keylist)".
+  (Contributed by Raymond Hettinger.)
+
+* 添加了一个新的操作码 "LIST_APPEND"，简化了列表推导生成的字节码，并使
+  其速度提高了大约三分之一。（由 Raymond Hettinger 贡献。）
+
+* 窥孔字节码优化器得到了改进，能够生成更短、更快的字节码；值得注意的是
+  ，生成的字节码更易读。（由 Raymond Hettinger 增强。）
+
+* String concatenations in statements of the form "s = s + "abc"" and
+  "s += "abc"" are now performed more efficiently in certain
+  circumstances.  This optimization won't be present in other Python
+  implementations such as Jython, so you shouldn't rely on it; using
+  the "join()" method of strings is still recommended when you want to
+  efficiently glue a large number of strings together. (Contributed by
+  Armin Rigo.)
+
+2.4版本优化的净结果是，Python 2.4运行pystone基准测试比Python 2.3快约5%
+，比Python 2.2快35%。（pystone并不是一个特别好的基准测试，但它是衡量
+Python性能最常用的方法。你的应用程序可能从Python 2.4中获得更大或更小的
+收益。）
+
+
+新增，改进和弃用的模块
+======================
+
+一如既往，Python的标准库获得了一些增强和错误修复。以下是一些最显著变化
+的部分列表，按模块名称字母顺序排序。请查阅源树中的 "Misc/NEWS" 文件以
+获取更完整的变化列表，或通过CVS日志查看所有细节。
+
+* "asyncore" 模块的 "loop()" 函数现在有一个 *count* 参数，允许你执行有
+  限次数的轮询循环。默认情况下仍然是无限循环。
+
+* "base64" 模块现在更完整地支持 **RFC 3548** 中的Base64、Base32和
+  Base16编码和解码，包括可选的大小写折叠和可选的替代字母表。（由Barry
+  Warsaw贡献。）
+
+* "bisect" 模块现在有底层的C实现，以提升性能。（由Dmitry Vasiliev贡献
+  。）
+
+* 由 Hye-Shik Chang 维护的东亚编解码器的 CJKCodecs 集合已集成到 2.4 中
+  。新的编码为：
+
+* 汉语（大陆）: gb2312, gbk, gb18030, big5hkscs, hz
+
+* 汉语（台湾）: big5, cp950
+
+* 日语: cp932, euc-jis-2004, euc-jp, euc-jisx0213, iso-2022-jp,
+     iso-2022-jp-1, iso-2022-jp-2, iso-2022-jp-3, iso-2022-jp-ext,
+     iso-2022-jp-2004, shift-jis, shift-jisx0213, shift-jis-2004
+
+* 韩语: cp949, euc-kr, johab, iso-2022-kr
+
+* 添加了其他一些新的编码：HP Roman8、 ISO_8859-11、 ISO_8859-16、
+  PCTP-154 和 TIS-620。
+
+* The UTF-8 and UTF-16 codecs now cope better with receiving partial
+  input. Previously the "StreamReader" class would try to read more
+  data, making it impossible to resume decoding from the stream.  The
+  "read()" method will now return as much data as it can and future
+  calls will resume decoding where previous ones left off.
+  (Implemented by Walter Dörwald.)
+
+* There is a new "collections" module for  various specialized
+  collection datatypes.  Currently it contains just one type, "deque",
+  a double-ended queue that supports efficiently adding and removing
+  elements from either end:
+
+     >>> from collections import deque
+     >>> d = deque('ghi')        # 创建一个新的包含三个项目的 deque
+     >>> d.append('j')           # 在右侧添加一个新的条目
+     >>> d.appendleft('f')       # 在左侧添加一个新的条目
+     >>> d                       # 显示 deque 的表示
+     deque(['f', 'g', 'h', 'i', 'j'])
+     >>> d.pop()                 # 返回并移除最右侧的条目
+     'j'
+     >>> d.popleft()             # 返回并移除最左侧的条目
+     'f'
+     >>> list(d)                 # 列出 deque 的内容
+     ['g', 'h', 'i']
+     >>> 'h' in d                # 搜索 deque
+     True
+
+  Several modules, such as the "queue" and "threading" modules, now
+  take advantage of "collections.deque" for improved performance.
+  (Contributed by Raymond Hettinger.)
+
+* "ConfigParser" 类略有增强。"read()" 方法现在返回成功解析的文件列表，
+  如果传递给 "set()" 方法的 *value* 参数不是字符串，则会引发
+  "TypeError"。（由 John Belmonte 和 David Goodger 贡献。）
+
+* The "curses" module now supports the ncurses extension
+  "use_default_colors()".  On platforms where the terminal supports
+  transparency, this makes it possible to use a transparent
+  background. (Contributed by Jörg Lehmann.)
+
+* The "difflib" module now includes an "HtmlDiff" class that creates
+  an HTML table showing a side by side comparison of two versions of a
+  text. (Contributed by Dan Gass.)
+
+* The "email" package was updated to version 3.0,  which dropped
+  various deprecated APIs and removes support for Python versions
+  earlier than 2.3.  The 3.0 version of the package uses a new
+  incremental parser for MIME messages, available in the
+  "email.FeedParser" module.  The new parser doesn't require reading
+  the entire message into memory, and doesn't raise exceptions if a
+  message is malformed; instead it records any problems in the
+  "defect" attribute of the message.  (Developed by Anthony Baxter,
+  Barry Warsaw, Thomas Wouters, and others.)
+
+* The "heapq" module has been converted to C.  The resulting tenfold
+  improvement in speed makes the module suitable for handling high
+  volumes of data.  In addition, the module has two new functions
+  "nlargest()" and "nsmallest()" that use heaps to find the N largest
+  or smallest values in a dataset without the expense of a full sort.
+  (Contributed by Raymond Hettinger.)
+
+* The "httplib" module now contains constants for HTTP status codes
+  defined in various HTTP-related RFC documents.  Constants have names
+  such as "OK", "CREATED", "CONTINUE", and "MOVED_PERMANENTLY"; use
+  pydoc to get a full list.  (Contributed by Andrew Eland.)
+
+* The "imaplib" module now supports IMAP's THREAD command (contributed
+  by Yves Dionne) and new "deleteacl()" and "myrights()" methods
+  (contributed by Arnaud Mazin).
+
+* The "itertools" module gained a "groupby(iterable[, *func*])"
+  function. *iterable* is something that can be iterated over to
+  return a stream of elements, and the optional *func* parameter is a
+  function that takes an element and returns a key value; if omitted,
+  the key is simply the element itself.  "groupby()" then groups the
+  elements into subsequences which have matching values of the key,
+  and returns a series of 2-tuples containing the key value and an
+  iterator over the subsequence.
+
+  Here's an example to make this clearer.  The *key* function simply
+  returns whether a number is even or odd, so the result of
+  "groupby()" is to return consecutive runs of odd or even numbers.
+
+     >>> import itertools
+     >>> L = [2, 4, 6, 7, 8, 9, 11, 12, 14]
+     >>> for key_val, it in itertools.groupby(L, lambda x: x % 2):
+     ...    print key_val, list(it)
+     ...
+     0 [2, 4, 6]
+     1 [7]
+     0 [8]
+     1 [9, 11]
+     0 [12, 14]
+     >>>
+
+  "groupby()" is typically used with sorted input.  The logic for
+  "groupby()" is similar to the Unix "uniq" filter which makes it
+  handy for eliminating, counting, or identifying duplicate elements:
+
+     >>> word = 'abracadabra'
+     >>> letters = sorted(word)   # 将字符串转换为按字母排序的列表
+     >>> letters
+     ['a', 'a', 'a', 'a', 'a', 'b', 'b', 'c', 'd', 'r', 'r']
+     >>> for k, g in itertools.groupby(letters):
+     ...    print k, list(g)
+     ...
+     a ['a', 'a', 'a', 'a', 'a']
+     b ['b', 'b']
+     c ['c']
+     d ['d']
+     r ['r', 'r']
+     >>> # 列出唯一字母
+     >>> [k for k, g in groupby(letters)]
+     ['a', 'b', 'c', 'd', 'r']
+     >>> # 计算字母出现次数
+     >>> [(k, len(list(g))) for k, g in groupby(letters)]
+     [('a', 5), ('b', 2), ('c', 1), ('d', 1), ('r', 2)]
+
+  （由 Hye-Shik Chang 贡献。）
+
+* "itertools" 还增加了一个名为 "tee(iterator, N)" 的函数，它返回 *N*
+  个独立迭代器，这些迭代器复制 *iterator*。如果省略 *N*，默认值为 2。:
+
+     >>> L = [1,2,3]
+     >>> i1, i2 = itertools.tee(L)
+     >>> i1,i2
+     (<itertools.tee object at 0x402c2080>, <itertools.tee object at 0x402c2090>)
+     >>> list(i1)               # 运行第一个迭代器直到耗尽
+     [1, 2, 3]
+     >>> list(i2)               # 运行第二个迭代器直到耗尽
+     [1, 2, 3]
+
+  Note that "tee()" has to keep copies of the values returned by the
+  iterator; in the worst case, it may need to keep all of them.   This
+  should therefore be used carefully if the leading iterator can run
+  far ahead of the trailing iterator in a long stream of inputs. If
+  the separation is large, then you might as well use  "list()"
+  instead.  When the iterators track closely with one another, "tee()"
+  is ideal.  Possible applications include bookmarking, windowing, or
+  lookahead iterators. (Contributed by Raymond Hettinger.)
+
+* A number of functions were added to the "locale"  module, such as
+  "bind_textdomain_codeset()" to specify a particular encoding and a
+  family of "l*gettext()" functions that return messages in the chosen
+  encoding. (Contributed by Gustavo Niemeyer.)
+
+* Some keyword arguments were added to the "logging" package's
+  "basicConfig()" function to simplify log configuration.  The default
+  behavior is to log messages to standard error, but various keyword
+  arguments can be specified to log to a particular file, change the
+  logging format, or set the logging level. For example:
+
+     import logging
+     logging.basicConfig(filename='/var/log/application.log',
+         level=0,  # 记录所有消息
+         format='%(levelname):%(process):%(thread):%(message)')
+
+  Other additions to the "logging" package include a "log(level, msg)"
+  convenience method, as well as a "TimedRotatingFileHandler" class
+  that rotates its log files at a timed interval.  The module already
+  had "RotatingFileHandler", which rotated logs once the file exceeded
+  a certain size.  Both classes derive from a new
+  "BaseRotatingHandler" class that can be used to implement other
+  rotating handlers.
+
+  （更改由 Vinay Sajip 实现。）
+
+* "marshal" 模块现在在解包数据结构时共享内部字符串。这可能会缩小某些
+  pickle 字符串的大小，但主要效果是使 ".pyc" 文件显著变小。（由 Martin
+  von Löwis 贡献。）
+
+* The "nntplib" module's "NNTP" class gained "description()" and
+  "descriptions()" methods to retrieve newsgroup descriptions for a
+  single group or for a range of groups. (Contributed by Jürgen A.
+  Erhard.)
+
+* "operator" 模块新增了两个函数，"attrgetter(attr)" 和
+  "itemgetter(index)"。这两个函数都返回一个接受单个参数并返回相应属性
+  或项的可调用对象；这些可调用对象在与 "map()" 或 "sorted()" 一起使用
+  时，是非常优秀的数据提取器。例如：
+
+     >>> L = [('c', 2), ('d', 1), ('a', 4), ('b', 3)]
+     >>> map(operator.itemgetter(0), L)
+     ['c', 'd', 'a', 'b']
+     >>> map(operator.itemgetter(1), L)
+     [2, 1, 4, 3]
+     >>> sorted(L, key=operator.itemgetter(1)) # 按元组的第二个项对列表进行排序
+     [('d', 1), ('c', 2), ('b', 3), ('a', 4)]
+
+  （由 Raymond Hettinger 贡献。）
+
+* "optparse" 模块进行了多项更新。该模块现在通过 "gettext.gettext()" 传
+  递其消息，使得可以国际化 Optik 的帮助和错误消息。选项的帮助消息现在
+  可以包含字符串 "'%default'"，该字符串将被选项的默认值替换。（由 Greg
+  Ward 贡献。）
+
+* 长期计划是在未来的某个 Python 版本中弃用 "rfc822" 模块，转而使用
+  "email" 包。为此，"email.Utils.formatdate" 函数已被修改，使其可以作
+  为 "rfc822.formatdate()" 的替代。您在编写新的电子邮件处理代码时可能
+  需要考虑这一点。（由 Anthony Baxter 实施。）
+
+* "os" 模块新增了 "urandom(n)" 函数，返回一个包含 *n* 字节随机数据的字
+  符串。该函数提供了对平台特定随机源（如 Linux 上的 "/dev/urandom" 或
+  Windows CryptoAPI）的访问。（由 Trevor Perrin 贡献。）
+
+* 另一个新函数："os.path.lexists(path)" 如果指定的文件存在（无论是否为
+  符号链接）则返回 true。这与现有的 "os.path.exists(path)" 函数不同，
+  后者在 *path* 是指向不存在目标的符号链接时返回 false。（由 Beni
+  Cherniavsky 贡献。）
+
+* A new "getsid()" function was added to the "posix" module that
+  underlies the "os" module. (Contributed by J. Raynor.)
+
+* "poplib" 模块现在已支持 SSL 上的 POP。 （由 Hector Urtubia 贡献。）
+
+* 现在 "profile" 模块将可对 C 扩展函数执行性能分析。 （由 Nick Bastin
+  贡献。）
+
+* The "random" module has a new method called "getrandbits(N)" that
+  returns a long integer *N* bits in length.  The existing
+  "randrange()" method now uses "getrandbits()" where appropriate,
+  making generation of arbitrarily large random numbers more
+  efficient.  (Contributed by Raymond Hettinger.)
+
+* "re" 模块接受的正则表达式语言扩展了简单的条件表达式，写作
+  "(?(group)A|B)"。*group* 可以是数字组 ID 或用 "(?P<group>...)" 在表
+  达式中提前定义的组名。如果指定的组匹配，正则表达式模式 *A* 将被用于
+  测试字符串；如果组未匹配，则使用模式 *B*。（由 Gustavo Niemeyer 贡献
+  。）
+
+* 由于 Gustavo Niemeyer 大量工作，"re" 模块也不再是递归的。在递归正则
+  表达式引擎中，某些模式会导致大量 C 栈空间被消耗，甚至可能溢出栈。例
+  如，如果你将一个 30000 字节的 "a" 字符串与表达式 "(a|b)+" 匹配，每个
+  字符会消耗一个栈帧。Python 2.3 试图检查栈溢出并抛出 "RuntimeError"
+  异常，但某些模式可以绕过检查，如果你运气不好，Python 可能会段错误。
+  Python 2.4 的正则表达式引擎可以无问题地匹配此模式。
+
+* The "signal" module now performs tighter error-checking on the
+  parameters to the "signal.signal()" function.  For example, you
+  can't set a handler on the "SIGKILL" signal; previous versions of
+  Python would quietly accept this, but 2.4 will raise a
+  "RuntimeError" exception.
+
+* Two new functions were added to the "socket" module. "socketpair()"
+  returns a pair of connected sockets and "getservbyport(port)" looks
+  up the service name for a given port number. (Contributed by Dave
+  Cole and Barry Warsaw.)
+
+* The "sys.exitfunc()" function has been deprecated.  Code should be
+  using the existing "atexit" module, which correctly handles calling
+  multiple exit functions.  Eventually "sys.exitfunc()" will become a
+  purely internal interface, accessed only by "atexit".
+
+* 现在 "tarfile" 模块默认将生成 GNU 格式的 tar 文件。 （由 Lars
+  Gustäbel 贡献。）
+
+* The "threading" module now has an elegantly simple way to support
+  thread-local data.  The module contains a "local" class whose
+  attribute values are local to different threads.
+
+     import threading
+
+     data = threading.local()
+     data.number = 42
+     data.url = ('www.python.org', 80)
+
+  Other threads can assign and retrieve their own values for the
+  "number" and "url" attributes.  You can subclass "local" to
+  initialize attributes or to add methods. (Contributed by Jim
+  Fulton.)
+
+* "timeit" 模块现在在计时循环中自动禁用周期性垃圾收集。这一改变使得连
+  续计时更具可比性。（由 Raymond Hettinger 贡献。）
+
+* "weakref" 模块现在支持更多种类的对象，包括 Python 函数、类实例、集合
+  、冻结集合、双端队列、数组、文件、套接字和正则表达式模式对象。（由
+  Raymond Hettinger 贡献。）
+
+* "xmlrpclib" 模块现在支持多调用扩展，用于在单个 HTTP 操作中传输多个
+  XML-RPC 调用。（由 Brian Quinlan 贡献。）
+
+* The "mpz", "rotor", and "xreadlines" modules have been removed.
+
+
+cookielib
+---------
+
+"cookielib" 库支持客户端处理 HTTP Cookie，与 "Cookie" 模块的服务器端
+Cookie 支持相呼应。Cookie 存储在 Cookie 罐中；该库透明地将网页服务器提
+供的 Cookie 存储在 Cookie 罐中，并在连接到服务器时从罐中提取 Cookie。
+与网页浏览器一样，策略对象控制是否接受 Cookie。
+
+为了跨会话存储 Cookie，提供了两种 Cookie 罐的实现：一种以 Netscape 格
+式存储 Cookie，以便应用程序可以使用 Mozilla 或 Lynx 的 Cookie 文件，另
+一种以与 Perl libwww 库相同的格式存储 Cookie。
+
+"urllib2" has been changed to interact with "cookielib":
+"HTTPCookieProcessor" manages a cookie jar that is used when accessing
+URLs.
+
+该模块由  John J. Lee 贡献。
+
+
+doctest
+-------
+
+由于 Edward Loper 和 Tim Peters 的贡献，"doctest" 模块进行了大量重构。
+测试仍然可以简单到只需运行 "doctest.testmod()"，但重构允许以各种方式自
+定义模块的操作。
+
+The new "DocTestFinder" class extracts the tests from a given object's
+docstrings:
+
+   def f (x, y):
+       """>>> f(2,2)
+   4
+   >>> f(3,2)
+   6
+       """
+       return x*y
+
+   finder = doctest.DocTestFinder()
+
+   # 获取 DocTest 实例列表
+   tests = finder.find(f)
+
+The new "DocTestRunner" class then runs individual tests and can
+produce a summary of the results:
+
+   runner = doctest.DocTestRunner()
+   for t in tests:
+       tried, failed = runner.run(t)
+
+   runner.summarize(verbose=1)
+
+上述示例生成以下输出：
+
+   1 items passed all tests:
+      2 tests in f
+   2 tests in 1 items.
+   2 passed and 0 failed.
+   Test passed.
+
+"DocTestRunner" uses an instance of the "OutputChecker" class to
+compare the expected output with the actual output.  This class takes
+a number of different flags that customize its behaviour; ambitious
+users can also write a completely new subclass of "OutputChecker".
+
+默认的输出检查器提供了一些方便的功能。例如，使用 "doctest.ELLIPSIS" 选
+项标志，预期输出中的省略号 ("...") 可以匹配任何子字符串，这使得更容易
+适应在细小方面有所变化的输出:
+
+   def o (n):
+       """>>> o(1)
+   <__main__.C instance at 0x...>
+   >>>
+   """
+
+另一个特殊字符串，"<BLANKLINE>", 匹配一个空行:
+
+   def p (n):
+       """>>> p(1)
+   <BLANKLINE>
+   >>>
+   """
+
+另一个新功能是通过指定 "doctest.REPORT_UDIFF" (统一差异) 、
+"doctest.REPORT_CDIFF" (上下文差异) 或 "doctest.REPORT_NDIFF" (增量式
+差异) 选项标志，生成输出差异风格的显示。例如:
+
+   def g (n):
+       """>>> g(4)
+   here
+   is
+   a
+   lengthy
+   >>>"""
+       L = 'here is a rather lengthy list of words'.split()
+       for word in L[:n]:
+           print word
+
+在指定 "doctest.REPORT_UDIFF" 的情况下运行上述函数的测试，你会得到以下
+输出：
+
+   **********************************************************************
+   File "t.py", line 15, in g
+   Failed example:
+       g(4)
+   Differences (unified diff with -expected +actual):
+       @@ -2,3 +2,3 @@
+        is
+        a
+       -lengthy
+       +rather
+   **********************************************************************
+
+
+构建和 C API 的改变
+===================
+
+对于 Python 构建过程和 C API 的一些修改:
+
+* 为常见扩展函数返回值添加了三个新的便利宏："Py_RETURN_NONE"、
+  "Py_RETURN_TRUE" 和 "Py_RETURN_FALSE"。（由 Brett Cannon 贡献。）
+
+* 另一个新宏，"Py_CLEAR"，减少 *obj* 的引用计数并将 *obj* 设置为空指针
+  。（由 Jim Fulton 贡献。)
+
+* 一个新的函数 "PyTuple_Pack(N, obj1, obj2, ..., objN)"，可以从一个可
+  变长度的Python对象参数列表中构造元组。（由Raymond Hettinger贡献。）
+
+* 一个新的函数 "PyDict_Contains(d, k)"，实现了快速的字典查找，而不会掩
+  盖查找过程中引发的异常。（由Raymond Hettinger贡献。）
+
+* The "Py_IS_NAN" macro returns 1 if its float or double argument *X*
+  is a NaN.   (Contributed by Tim Peters.)
+
+* C代码可以通过使用新的 "PyEval_ThreadsInitialized()" 函数来避免不必要
+  的锁定，以判断是否进行了任何线程操作。如果此函数返回false，则不需要
+  锁定操作。（由Nick Coghlan贡献。）
+
+* 一个新的函数 "PyArg_VaParseTupleAndKeywords()"，与
+  "PyArg_ParseTupleAndKeywords()" 相同，但接受一个 "va_list" 而不是参
+  数数量。（由Greg Chapman贡献。）
+
+* A new method flag, "METH_COEXIST", allows a function defined in
+  slots to co-exist with a "PyCFunction" having the same name.  This
+  can halve the access time for a method such as "set.__contains__()".
+  (Contributed by Raymond Hettinger.)
+
+* Python现在可以内置对解释器本身的额外分析功能，旨在帮助开发Python核心
+  的人员。向 **configure** 脚本提供 "--enable-profiling" 选项将允许您
+  使用 **gprof** 对解释器进行分析，提供 "--with-tsc" 开关则启用使用
+  Pentium的时间戳计数器寄存器进行分析。请注意，"--with-tsc" 开关命名略
+  有不当，因为该分析功能在PowerPC平台上也能工作，尽管该处理器架构不将
+  该寄存器称为“TSC寄存器”。（由Jeremy Hylton贡献。）
+
+* The "tracebackobject" type has been renamed to "PyTracebackObject".
+
+
+移植专属的改变
+--------------
+
+* Windows端口现在可以在MSVC++ 7.1以及版本6下构建。（由Martin von Löwis
+  贡献。）
+
+
+移植到 Python 2.4
+=================
+
+本节列出了先前描述的可能需要修改你的代码的改变：
+
+* 左移操作和过大的十六进制/八进制常量不再触发 "FutureWarning"，并且返
+  回一个限制在32或64位的值；相反，它们返回一个长整数。
+
+* Integer operations will no longer trigger an "OverflowWarning". The
+  "OverflowWarning" warning will disappear in Python 2.5.
+
+* The "zip()" built-in function and "itertools.izip()" now return an
+  empty list instead of raising a "TypeError" exception if called with
+  no arguments.
+
+* You can no longer compare the "date" and "datetime" instances
+  provided by the "datetime" module.  Two  instances of different
+  classes will now always be unequal, and  relative comparisons ("<",
+  ">") will raise a "TypeError".
+
+* "dircache.listdir()" 现在将异常传递给调用者，而不是返回空列表。
+
+* "LexicalHandler.startDTD" used to receive the public and system IDs
+  in the wrong order.  This has been corrected; applications relying
+  on the wrong order need to be fixed.
+
+* 现在 "fcntl.ioctl()" 会在 *mutate* 参数被省略并且将造成影响时发出警
+  告。
+
+* 现在 "tarfile" 模块默认将生成 GNU 格式的 tar 文件。
+
+* 在导入模块时遭遇失败不会再将部分初始化的模块对象留在 "sys.modules"
+  中。
+
+* 现在 "None" 是一个常量；将一个新值绑定到 "None" 将导致语法错误。
+
+* The "signal.signal()" function now raises a "RuntimeError" exception
+  for certain illegal values; previously these errors would pass
+  silently.  For example, you can no longer set a handler on the
+  "SIGKILL" signal.
+
+
+致谢
+====
+
+作者感谢以下人员对本文各种草稿给予的建议、更正和协助：Koray Can、Hye-
+Shik Chang、Michael Dyck、Raymond Hettinger、Brian Hurt、Hamish Lawson
+、Fredrik Lundh、Sean Reifschneider、Sadruddin Rejeb。
