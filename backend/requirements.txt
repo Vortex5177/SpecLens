@@ -1,0 +1,20 @@
+# Web 框架（版本已于 2026-09 核实为当前稳定版）
+fastapi>=0.141,<0.142
+uvicorn[standard]>=0.30
+pydantic>=2.0
+# multipart 文件上传支持（UploadFile 依赖）
+python-multipart>=0.0.9
+# PEP 508 / PEP 440 依赖声明解析（Phase 3 版本识别）
+packaging>=24.0
+
+# LangChain 生态（Phase 7+ 使用，Phase 1 仅安装备用）
+langchain>=1.3
+langgraph>=1.2
+
+# Qdrant 向量库（Phase 4 RAG；连接本地原生运行的 Qdrant 服务，非嵌入式）
+# langchain-qdrant 是 LangChain 1.x 官方推荐的集成包（旧 langchain_community.vectorstores.Qdrant 已废弃）
+qdrant-client>=1.19
+langchain-qdrant>=1.1
+
+# 环境变量管理
+python-dotenv>=1.0

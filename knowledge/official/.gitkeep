@@ -1,0 +1,3 @@
+# 本目录存放预置官方文档，按 technology/version 组织，例如：
+# official/fastapi/0.110/、official/fastapi/0.120/
+# Phase 4 起由 ingestion 流程导入 Qdrant。

@@ -1,0 +1,56 @@
+# Docker Compose 编排：三个服务（备用方案，当前不作为主要运行方式）
+# ⚠️ 本机 Docker Desktop 不稳定，日常开发已改用 Windows 原生 Qdrant：
+#    双击 tools\qdrant\start-qdrant.bat 启动（详见 tools/qdrant/README.md），
+#    后端/前端继续用 uvicorn + npm run dev 本地运行。
+# 本文件保留仅供容器化部署参考。
+# - backend: FastAPI 后端（8000）
+# - frontend: React + nginx（5173，/api 由 nginx 代理到 backend）
+# - qdrant: 向量数据库（6333）
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ALLOWED_ORIGINS=http://localhost:5173
+      - QDRANT_URL=http://qdrant:6333
+    env_file:
+      # 可选：存在 .env 时注入（DEEPSEEK_API_KEY 等）；文件缺失不报错
+      - path: ./backend/.env
+        required: false
+    volumes:
+      # 用户上传的项目目录（Phase 2 使用）
+      - uploads_data:/data/uploads
+      # 预置知识库（Phase 4/11 使用）
+      - ./knowledge:/app/knowledge
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      # 向量数据持久化
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  uploads_data:
+  qdrant_data:

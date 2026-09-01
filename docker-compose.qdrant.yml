@@ -1,0 +1,24 @@
+# Qdrant 单服务编排（Phase 4 RAG 的向量库）。
+# 用法：docker compose -f docker-compose.qdrant.yml up -d
+# 与主 docker-compose.yml 的 qdrant 服务配置保持一致；
+# 本地开发阶段可只启动此服务，无需构建前后端镜像。
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ai-reviewer-qdrant
+    ports:
+      - "6333:6333"   # REST API
+      - "6334:6334"   # gRPC
+    volumes:
+      # 向量数据持久化（容器重建不丢数据）
+      - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
