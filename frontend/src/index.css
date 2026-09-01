@@ -172,6 +172,13 @@ h1 {
   color: #ad6800;
 }
 
+/* 版本变更文档（What's New）标识：Migration 检索的变更证据 */
+.badge-new {
+  margin-left: 6px;
+  background: #e6f4ff;
+  color: #0958d9;
+}
+
 .version-table {
   width: 100%;
   border-collapse: collapse;
@@ -209,18 +216,33 @@ h1 {
   cursor: not-allowed;
 }
 
-/* ===== 手动添加技术（未检测到依赖文件时使用）===== */
+/* ===== 手动添加技术（候选范围 = 知识库已有文档）===== */
 .manual-add {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin: 12px 0 16px;
+  flex-wrap: wrap;
 }
 
-.manual-add input {
+.manual-add select {
   padding: 6px 10px;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
   font-size: 13px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.manual-add select:focus {
+  border-color: #1677ff;
+  outline: none;
+}
+
+.manual-add select:disabled {
+  background: #f5f5f5;
+  color: #bbb;
+  cursor: not-allowed;
 }
 
 .manual-add button {
@@ -233,8 +255,18 @@ h1 {
   cursor: pointer;
 }
 
-.manual-add button:hover {
+.manual-add button:hover:not(:disabled) {
   background: #e6f4ff;
+}
+
+.manual-add button:disabled {
+  border-color: #d9d9d9;
+  color: #bbb;
+  cursor: not-allowed;
+}
+
+.manual-add .hint {
+  margin: 0;
 }
 
 /* ===== 审查模式面板 ===== */
@@ -556,6 +588,15 @@ h1 {
   border: 1px solid #d9d9d9;
   border-radius: 6px;
   font-size: 13px;
+}
+
+.knowledge-add select {
+  padding: 6px 10px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  cursor: pointer;
 }
 
 .knowledge-add button {

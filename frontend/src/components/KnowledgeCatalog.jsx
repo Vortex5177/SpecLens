@@ -14,6 +14,8 @@ function KnowledgeCatalog() {
   const [sourceType, setSourceType] = useState("official");
   const [technology, setTechnology] = useState("");
   const [version, setVersion] = useState("");
+  // 官方文档类型：auto（按文件名推断）/ reference（规范参考）/ whats_new（版本变更，Migration 检索用）
+  const [docType, setDocType] = useState("auto");
   const [docFile, setDocFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -58,6 +60,7 @@ function KnowledgeCatalog() {
     if (sourceType === "official") {
       formData.append("technology", technology.trim());
       formData.append("version", version.trim());
+      formData.append("document_type", docType);
     }
     setUploading(true);
     try {
@@ -181,6 +184,16 @@ function KnowledgeCatalog() {
               onChange={(e) => setVersion(e.target.value)}
               disabled={uploading}
             />
+            <select
+              value={docType}
+              onChange={(e) => setDocType(e.target.value)}
+              disabled={uploading}
+              title="文档类型：版本变更文档（What's New）是 Migration 检索的主要证据"
+            >
+              <option value="auto">类型：自动识别</option>
+              <option value="reference">类型：规范参考</option>
+              <option value="whats_new">类型：版本变更（What's New）</option>
+            </select>
           </div>
         )}
         <div className="knowledge-add-fields">
@@ -233,7 +246,12 @@ function KnowledgeCatalog() {
                             <code>{v.version}</code>
                           </td>
                         )}
-                        <td>{doc.file}</td>
+                        <td>
+                          {doc.file}
+                          {doc.document_type === "whats_new" && (
+                            <span className="badge badge-new">变更</span>
+                          )}
+                        </td>
                         <td>{chunkBadge(doc.chunks)}</td>
                         <td>
                           <button

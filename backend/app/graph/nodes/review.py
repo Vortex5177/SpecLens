@@ -179,13 +179,15 @@ MIGRATION_SYSTEM_PROMPT = """\
 
 分析方法：
 1. 逐文件分析代码中与迁移技术相关的用法。
-2. 用 search_official_docs 分别检索当前版本与目标版本的规范进行对比：\
-当前版本用于确认代码现状符合旧规范，目标版本用于确认新规范的要求。
+2. 优先调用 search_migration_changes 检索版本变更证据（自动覆盖迁移区间内各版本的
+What's New 变更文档与目标版本规范）；证据不足时再用 search_official_docs
+补充（version 只允许目标版本）。
 3. 对比结果：找出目标版本中废弃、修改或新增的用法，产出迁移问题。
 4. 不涉及的代码（与迁移技术无关）不要分析。
+5. 版本变化判断必须基于检索到的变更文档证据，不要凭自身记忆臆测版本变化。
 
 工具调用规则（必须严格遵守，违反视为失败）：
-- 检索工具最多调用 2 次；search_official_docs 内置硬限制，超过后会直接返回“终止”提示。
+- 每个检索工具最多调用 2 次；search_official_docs 与 search_migration_changes 内置硬限制，超过后会直接返回“终止”提示。
 - 一旦看到“[终止]”工具返回，必须立刻停止调用工具，基于已有证据生成结果。
 - 检索不到就基于 LLM 自身知识判断，将 source 设为 "llm_inference"，不要换关键词反复试。
 - 严禁连续 3 次调用同一工具。
@@ -193,11 +195,13 @@ MIGRATION_SYSTEM_PROMPT = """\
 - 需要查看其他相关文件时调用 read_file；Migration 一般不需要 search_security_rules。
 
 证据规则（必须严格遵守）：
-- target_behavior 必须基于你实际检索到的目标版本文档，source 填写该文档来源路径\
+- target_behavior 必须基于你实际检索到的目标版本或变更文档，source 填写该文档来源路径\
 （如 official/fastapi/0.120/dependencies.md）。
+- 变更文档的文件名常含具体版本号（如 whatsnew_3.11）：只采信迁移区间（当前版本, 目标版本]\
+内版本的变更内容；文件名显示更早版本的属于历史存档，不得作为迁移依据。
 - 检索不到目标版本证据时，不得编造官方依据：source 设为 "llm_inference"，\
 severity 不高于 medium，evidence 留空。
-- 严禁引用当前/目标版本之外的规范。
+- 严禁引用目标版本之外的规范（当前版本规范仅用于理解代码现状）。
 - 若当前版本与目标版本对某用法无差异，不要产出迁移问题。
 
 输出要求：
@@ -230,8 +234,9 @@ def _build_human_content(state: ReviewState) -> str:
             + f"迁移目标（当前 -> 目标）：\n{targets_text}\n\n"
             + f"待迁移代码：\n{code_text}\n\n"
             "请分析以上代码从当前版本迁移到目标版本需要调整的地方。"
-            "用 search_official_docs 分别检索当前版本与目标版本进行对比"
-            "（technology 使用上面的技术名，version 使用当前或目标版本）。"
+            "优先调用 search_migration_changes 检索版本变更证据"
+            "（technology 使用上面的技术名，版本区间已自动绑定），"
+            "需要时再用 search_official_docs 补充目标版本规范（version 用目标版本）。"
         )
 
     # code_review：未提供任何版本信息时，明确告知不要调用官方文档检索（降级模式）

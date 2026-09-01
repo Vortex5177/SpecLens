@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * 版本检测与确认面板。
  * - exact：展示检测到的精确版本（可覆盖）
  * - needs_confirmation：展示范围约束，必须填写具体版本才能继续
- * - 手动添加：未检测到依赖文件时（如只上传了源码），用户可自行指定技术与版本（规格第 1 节）
+ * - 手动添加：从知识库已有文档中选择技术与版本（选项来自 /api/knowledge/catalog），
+ *   保证后续版本敏感检索有据可依（规格第 1 节）
  */
 function VersionPanel({ versions, projectId, onConfirmed }) {
   // 本地可增删的版本列表（初始为后端检测结果，手动添加的技术追加到末尾）
@@ -13,10 +14,24 @@ function VersionPanel({ versions, projectId, onConfirmed }) {
   const [inputs, setInputs] = useState(() =>
     Object.fromEntries(versions.map((v) => [v.technology, v.version || ""]))
   );
+  // 知识库目录：手动添加的技术/版本候选项（加载失败时降级为不可用并提示）
+  const [catalog, setCatalog] = useState(null);
   const [manualTech, setManualTech] = useState("");
   const [manualVersion, setManualVersion] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/knowledge/catalog")
+      .then((res) => res.json())
+      .then((data) => setCatalog(Array.isArray(data.official) ? data : { official: [] }))
+      .catch(() => setCatalog({ official: [] }));
+  }, []);
+
+  const officialOptions = catalog ? catalog.official : [];
+  // 选中技术对应的可选版本列表（知识库目录顺序即展示顺序）
+  const versionOptions = officialOptions.find((t) => t.technology === manualTech)?.versions
+    .map((v) => v.version) || [];
 
   const pendingCount = rows.filter(
     (v) => v.status === "needs_confirmation" && !v.confirmed
@@ -31,7 +46,11 @@ function VersionPanel({ versions, projectId, onConfirmed }) {
     const tech = manualTech.trim().toLowerCase();
     const version = manualVersion.trim();
     if (!tech || !version) {
-      setError("手动添加需同时填写技术名与版本");
+      setError("手动添加需同时选择技术与版本（候选范围 = 知识库已有文档）");
+      return;
+    }
+    if (!versionOptions.includes(version)) {
+      setError(`知识库中没有 ${tech} ${version} 的文档，请先在知识库中添加或选择其他版本`);
       return;
     }
     if (rows.some((v) => v.technology === tech)) {
@@ -155,21 +174,45 @@ function VersionPanel({ versions, projectId, onConfirmed }) {
       )}
 
       <div className="manual-add">
-        <input
-          type="text"
-          placeholder="技术名，如 fastapi"
-          value={manualTech}
-          onChange={(e) => setManualTech(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="版本，如 0.120.0"
-          value={manualVersion}
-          onChange={(e) => setManualVersion(e.target.value)}
-        />
-        <button type="button" onClick={handleAddManual} disabled={submitting}>
-          手动添加
-        </button>
+        {officialOptions.length === 0 ? (
+          <p className="hint">
+            {catalog === null
+              ? "正在加载知识库文档目录..."
+              : "知识库中暂无官方文档，请先在「本地知识库文档」卡片中添加后再手动指定版本"}
+          </p>
+        ) : (
+          <>
+            <select
+              value={manualTech}
+              onChange={(e) => {
+                setManualTech(e.target.value);
+                setManualVersion(""); // 切换技术后重置版本选择
+              }}
+            >
+              <option value="">选择技术</option>
+              {officialOptions.map((t) => (
+                <option key={t.technology} value={t.technology}>
+                  {t.technology}
+                </option>
+              ))}
+            </select>
+            <select
+              value={manualVersion}
+              onChange={(e) => setManualVersion(e.target.value)}
+              disabled={!manualTech}
+            >
+              <option value="">{manualTech ? "选择版本" : "先选技术"}</option>
+              {versionOptions.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={handleAddManual} disabled={submitting}>
+              手动添加
+            </button>
+          </>
+        )}
       </div>
 
       <button type="submit" disabled={submitting}>

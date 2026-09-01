@@ -7,6 +7,8 @@ knowledge/official/{technology}/{version}/... 中的前两级目录名
 
 每个块携带规格第 12 节要求的完整元数据：
 technology / version / source_type / document_type / topic。
+官方文档的 document_type 区分 reference（规范参考）与 whats_new（版本变更文档，
+Migration 检索的主要信息来源，SpecLens §2/§12）。
 
 流程：扫描目录 -> 按扩展名过滤 -> 分块 -> Embedding -> 写入 Qdrant。
 """
@@ -27,6 +29,16 @@ _splitter = RecursiveCharacterTextSplitter(
 )
 
 
+def infer_document_type(stem: str) -> str:
+    """按文件名推断官方文档类型：含 whats_new / whatsnew 的视为版本变更文档，其余为规范参考。
+
+    先统一分隔符再去掉下划线比较，同时命中 whats_new / whats-new / whatsnew 等写法。
+    全量扫描与上传自动模式共用；用户上传时也可显式指定，不依赖推断。
+    """
+    normalized = stem.lower().replace("-", "_").replace(" ", "_")
+    return "whats_new" if "whatsnew" in normalized.replace("_", "") else "reference"
+
+
 def get_qdrant_client() -> QdrantClient:
     """创建到本地 Qdrant 服务的客户端（非嵌入式）。"""
     return QdrantClient(url=config.QDRANT_URL)
@@ -44,10 +56,10 @@ def ensure_collections(client: QdrantClient) -> None:
                 collection_name=collection,
                 vectors_config=VectorParams(size=config.BGE_M3_DIM, distance=Distance.COSINE),
             )
-    # technology/version 是官方文档每次检索必用的过滤字段，建索引加速。
+    # technology/version/document_type 是检索必用的过滤字段，建索引加速。
     # 注意：langchain-qdrant 把 Document.metadata 嵌套存放在 payload.metadata 下，
     # 因此索引与过滤都要用 metadata.* 路径。
-    for field in ("metadata.technology", "metadata.version"):
+    for field in ("metadata.technology", "metadata.version", "metadata.document_type"):
         client.create_payload_index(
             collection_name=config.QDRANT_COLLECTION,
             field_name=field,
@@ -91,7 +103,8 @@ def _collect_official_documents() -> list[Document]:
                             "technology": tech_dir.name,
                             "version": version_dir.name,
                             "source_type": "official",
-                            "document_type": "official_doc",
+                            # 按文件名推断：whats_new 命名的是版本变更文档（SpecLens §12）
+                            "document_type": infer_document_type(file_path.stem),
                             # topic 取文件名（不含扩展名），如 dependencies
                             "topic": file_path.stem,
                         },
@@ -157,12 +170,12 @@ def ingest_document(file_path: Path, metadata: dict) -> int:
     return len(documents)
 
 
-def _chunk_counts_by_source() -> dict[str, int]:
-    """从 Qdrant 统计每个知识文件的已入库分块数（source -> chunks）。
+def _chunk_counts_by_source() -> dict[str, dict]:
+    """从 Qdrant 统计每个知识文件的已入库分块数与文档类型（source -> 统计）。
 
     Qdrant 不可用时返回空 dict（目录清单仍可展示，只是不显示入库状态）。
     """
-    counts: dict[str, int] = {}
+    counts: dict[str, dict] = {}
     try:
         client = get_qdrant_client()
         for collection in (config.QDRANT_COLLECTION, config.QDRANT_SECURITY_COLLECTION):
@@ -174,13 +187,17 @@ def _chunk_counts_by_source() -> dict[str, int]:
                     collection_name=collection,
                     limit=256,
                     offset=offset,
-                    with_payload=["metadata.source"],
+                    with_payload=["metadata.source", "metadata.document_type"],
                     with_vectors=False,
                 )
                 for point in points:
-                    source = (point.payload or {}).get("metadata", {}).get("source")
-                    if source:
-                        counts[source] = counts.get(source, 0) + 1
+                    meta = (point.payload or {}).get("metadata", {})
+                    source = meta.get("source")
+                    if not source:
+                        continue
+                    info = counts.setdefault(source, {"chunks": 0, "document_type": ""})
+                    info["chunks"] += 1
+                    info["document_type"] = info["document_type"] or meta.get("document_type", "")
                 if offset is None:
                     break
     except Exception as e:
@@ -226,10 +243,13 @@ def catalog_knowledge() -> dict:
 
     def _doc_entry(file_path: Path) -> dict:
         source = file_path.relative_to(config.KNOWLEDGE_DIR).as_posix()
+        info = counts.get(source, {})
         return {
             "file": file_path.name,
             "topic": file_path.stem,
-            "chunks": counts.get(source),
+            "chunks": info.get("chunks"),
+            # 已入库文档的类型（reference/whats_new 等）；未入库时为推断值，便于前端展示
+            "document_type": info.get("document_type") or infer_document_type(file_path.stem),
         }
 
     official_tree = []

@@ -17,6 +17,7 @@ from app.services import retrieval
 from app.services.ingestion import (
     catalog_knowledge,
     delete_document_vectors,
+    infer_document_type,
     ingest_document,
     ingest_knowledge,
 )
@@ -45,16 +46,26 @@ def upload_document(
     source_type: str = Form(..., description="official 或 security"),
     technology: str = Form("", description="技术名（official 必填，如 fastapi）"),
     version: str = Form("", description="版本（official 必填，如 0.120）"),
+    document_type: str = Form(
+        "auto",
+        description="official 文档类型：reference（规范参考）/ whats_new（版本变更）/ auto（按文件名推断）",
+    ),
 ) -> dict:
     """用户上传知识文档并即时入库（规格第 11 节）。
 
     official：保存到 knowledge/official/{technology}/{version}/ 并携带对应元数据；
     security：保存到 knowledge/security/，固定 technology=general、version=latest。
+    document_type 区分 reference 与 whats_new（Migration 检索的变更证据，
+    SpecLens §2），auto 时按文件名推断。
     支持 .zip：解压后白名单文档逐个拍平入库（官方文档整站导出常见形式）。
     同名文件覆盖，确定性块 ID 保证重复上传幂等。
     """
     if source_type not in ("official", "security"):
         raise HTTPException(status_code=400, detail="source_type 只能是 official 或 security")
+    if document_type not in ("auto", "reference", "whats_new"):
+        raise HTTPException(
+            status_code=400, detail="document_type 只能是 auto / reference / whats_new"
+        )
     if source_type == "official":
         if not technology or not version:
             raise HTTPException(status_code=400, detail="official 文档必须提供 technology 与 version")
@@ -82,11 +93,13 @@ def upload_document(
 
     if source_type == "official":
         target_dir = config.KNOWLEDGE_DIR / "official" / technology / version
+        # document_type 先存用户选择（可能为 auto）：单文件在下面解析，
+        # zip 由 _extract_and_ingest_zip 逐文件解析（压缩包内可能混合两种类型）
         metadata = {
             "technology": technology,
             "version": version,
             "source_type": "official",
-            "document_type": "official_doc",
+            "document_type": document_type,
             "topic": Path(filename).stem,
         }
     else:
@@ -118,6 +131,10 @@ def upload_document(
 
     file_path = target_dir / filename
     file_path.write_bytes(content)
+
+    # auto 时按文件名解析（单文件场景；zip 在 _extract_and_ingest_zip 内逐文件解析）
+    if metadata["document_type"] == "auto":
+        metadata["document_type"] = infer_document_type(Path(filename).stem)
 
     try:
         chunks = ingest_document(file_path, metadata)
@@ -182,6 +199,10 @@ def _extract_and_ingest_zip(content: bytes, target_dir: Path, metadata: dict) ->
                 file_path.write_bytes(data)
                 written.append(file_path)
                 doc_meta = dict(metadata, topic=Path(flat_name).stem)
+                # 压缩包内可能混合 reference 与 whats_new：auto 时逐文件推断，
+                # 显式指定时整包统一（用户已明确声明类型）
+                if doc_meta.get("document_type") == "auto":
+                    doc_meta["document_type"] = infer_document_type(Path(flat_name).stem)
                 chunks = ingest_document(file_path, doc_meta)
                 ingested.append({
                     "file": file_path.relative_to(config.KNOWLEDGE_DIR).as_posix(),
@@ -269,6 +290,26 @@ def search(
     """Official Retriever：缺少 technology 或 version 直接 422，绝不跨版本返回。"""
     results = retrieval.search_official_docs(technology, version, query, limit)
     return {"technology": technology, "version": version, "results": results}
+
+
+@router.get("/search/migration")
+def search_migration(
+    technology: str = Query(min_length=1, description="技术名，如 python"),
+    current_version: str = Query(min_length=1, description="当前版本，如 3.10"),
+    target_version: str = Query(min_length=1, description="目标版本，如 3.13"),
+    query: str = Query(min_length=1, description="检索问题"),
+    limit: int = Query(default=5, ge=1, le=20),
+) -> dict:
+    """Migration Retriever（SpecLens §6）：迁移区间 What's New + 目标版本 Reference。"""
+    results = retrieval.search_migration_docs(
+        technology, current_version, target_version, query, limit
+    )
+    return {
+        "technology": technology,
+        "current_version": current_version,
+        "target_version": target_version,
+        "results": results,
+    }
 
 
 @router.get("/search/security")

@@ -1,12 +1,14 @@
 """Review Agent 的工具集（Phase 8，规格第 16 节）。
 
-V1 单 Agent，只有四个只读工具：
+V1 单 Agent，只读工具：
 list_files / read_file / search_official_docs / search_security_rules
+（Migration 模式额外提供 search_migration_changes）
 
 安全边界（规格第 26 节）：
 - 所有文件工具限制在项目目录内，防路径穿越
 - 不修改代码、不删除文件、不执行命令
-- 官方文档检索强制使用用户已确认的版本，拒绝其他版本
+- 官方文档检索强制使用用户已确认的版本，拒绝其他版本；
+  Migration 变更证据检索限制在（当前版本, 目标版本] 区间内（SpecLens §6）
 """
 from pathlib import Path
 
@@ -43,9 +45,10 @@ def build_tools(
     """
     target_versions = target_versions or {}
     # 硬上限：防止 LLM 无限调用（规格要求每个维度最多 2 次检索）
-    call_counts = {"official": 0, "security": 0}
+    call_counts = {"official": 0, "security": 0, "migration": 0}
     OFFICIAL_LIMIT = 3
     SECURITY_LIMIT = 2
+    MIGRATION_LIMIT = 2
 
     @tool
     def list_files() -> str:
@@ -133,4 +136,42 @@ def build_tools(
             f"[来源: {r['source']} | 相似度: {r['score']}]\n{r['content']}" for r in results
         )
 
-    return [list_files, read_file, search_official_docs, search_security_rules]
+    tools = [list_files, read_file, search_official_docs, search_security_rules]
+
+    # Migration 模式才提供：变更证据检索（区间 What's New + 目标版本规范，SpecLens §6/§7）
+    if target_versions:
+
+        @tool
+        def search_migration_changes(technology: str, query: str) -> str:
+            """检索迁移区间内的版本变更证据（仅 Migration 可用）。
+
+            按本工具已绑定的当前版本与目标版本自动检索：两个版本之间各版本的
+            What's New 变更文档 + 目标版本的规范文档。用于判断 API 是否废弃/
+            参数或行为是否变化。参数 technology 使用迁移列表中的技术名。
+            """
+            tech = technology.lower()
+            target = target_versions.get(tech)
+            current = confirmed_versions.get(tech)
+            if not target or current is None:
+                migrating = ", ".join(sorted(target_versions))
+                return f"[错误] 技术 {technology} 不在迁移列表中，可检索的技术：{migrating}"
+            call_counts["migration"] += 1
+            if call_counts["migration"] > MIGRATION_LIMIT:
+                return (
+                    f"[终止] 迁移证据检索已达上限 {MIGRATION_LIMIT} 次，禁止继续调用。"
+                    "请直接用已有证据生成最终结果。"
+                )
+            results = retrieval.search_migration_docs(tech, current, target, query, limit=5)
+            if not results:
+                return (
+                    f"[提示] 知识库中没有 {technology} {current} -> {target} 与「{query}」"
+                    "相关的变更/规范证据。请基于代码本身判断，不要反复检索。"
+                )
+            return "\n---\n".join(
+                f"[来源: {r['source']} | 类型: {r['document_type'] or 'reference'} | 相似度: {r['score']}]\n{r['content']}"
+                for r in results
+            )
+
+        tools.append(search_migration_changes)
+
+    return tools

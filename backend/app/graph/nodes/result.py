@@ -154,10 +154,10 @@ def _generate_migration_result(state: ReviewState) -> dict:
     """Migration 模式：为每个迁移点生成 Fix Prompt 与项目级迁移提示。"""
     confirmed = state["confirmed_versions"]
     targets = state.get("target_versions", {})
-    # 未参与迁移的技术保持原版本列出（提醒不要动它们）
-    unchanged_text = _format_versions(
-        {tech: v for tech, v in confirmed.items() if tech not in targets}
-    ) or "（无）"
+    # 未参与迁移的技术保持原版本列出（提醒不要动它们）；
+    # 全部技术都迁移时直接写（无），避免套用无版本降级占位文案
+    unchanged = {tech: v for tech, v in confirmed.items() if tech not in targets}
+    unchanged_text = _format_versions(unchanged) if unchanged else "（无）"
     migrations_text = "\n".join(
         f"- {tech} {confirmed[tech]} -> {targets[tech]}" for tech in targets
     )

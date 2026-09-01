@@ -9,7 +9,7 @@
 - **版本敏感检索**：官方文档按 `technology + version` 硬性过滤，绝不跨版本返回结果；知识库中没有证据时明确标注 `llm_inference`，不伪造官方依据
 - **绝不猜测版本**：只读依赖文件识别版本；精确锁定（`==`、锁文件）直接采用，范围约束（`>=`、`^`、`~`）必须由用户确认后才允许审查；无依赖文件时可手动指定技术与版本，也可不提供任何版本直接审查（降级为安全规范 + 模型自身知识，依据标注 `llm_inference`）
 - **Code Review**：单 Agent 动态调用只读工具收集上下文，输出 Pydantic 强约束的结构化问题列表（文件 / 行号 / 类别 / 严重级别 / 置信度 / 证据 / 建议）
-- **Migration**：同一引擎对比两个版本的规范，产出「当前行为 → 目标行为」的迁移调整点
+- **Migration**：同一引擎检索迁移区间内各版本的 What's New 变更文档 + 目标版本规范，产出「当前行为 → 目标行为」的迁移调整点（知识库文档按 `document_type` 区分 reference / whats_new）
 - **Fix Prompt**：每个问题与项目级汇总均由模板确定性生成（不再调 LLM），可直接粘贴给 AI Coding 工具
 
 ## 架构
@@ -91,7 +91,7 @@ copy .env.example .env             # 然后填入 DEEPSEEK_API_KEY
 两种方式：
 
 - **手动放文件 + 全量入库**：向 `knowledge/` 放入文档后调用 `POST /api/knowledge/ingest`
-- **接口上传**：`POST /api/knowledge/documents`（multipart），指定 `source_type`（official/security），official 还需指定 `technology` 与 `version`；文档保存后立即增量入库，无需再调 ingest
+- **接口上传**：`POST /api/knowledge/documents`（multipart），指定 `source_type`（official/security），official 还需指定 `technology` 与 `version`，可选 `document_type`（reference / whats_new，缺省按文件名推断）；文档保存后立即增量入库，无需再调 ingest
 
 目录结构即元数据：`knowledge/official/fastapi/0.120/xxx.md` 的每个分块会携带 `technology=fastapi, version=0.120`。重复入库幂等（确定性块 ID）。首次调用需加载 BGE-M3 模型（约 2.3GB，首次从 HuggingFace 下载）。
 
@@ -132,10 +132,11 @@ npm run dev
 | GET | `/api/projects/{project_id}` | 查询项目分析结果 |
 | POST | `/api/projects/{project_id}/versions` | 确认 / 覆盖技术版本 |
 | POST | `/api/knowledge/ingest` | 扫描 knowledge/ 并全量入库 Qdrant |
-| POST | `/api/knowledge/documents` | 上传知识文档（.md/.txt/.rst 或 .zip 压缩包，指定 technology/version）并即时入库 |
+| POST | `/api/knowledge/documents` | 上传知识文档（.md/.txt/.rst 或 .zip 压缩包，指定 technology/version 与文档类型）并即时入库 |
 | DELETE | `/api/knowledge/documents` | 删除知识文档（同时移除本地文件与 Qdrant 分块） |
-| GET | `/api/knowledge/catalog` | 查看本地已有规范文档清单（按技术/版本分组，附入库分块数） |
+| GET | `/api/knowledge/catalog` | 查看本地已有规范文档清单（按技术/版本分组，附入库分块数与文档类型） |
 | GET | `/api/knowledge/search` | 版本敏感的官方文档检索（technology + version 必填） |
+| GET | `/api/knowledge/search/migration` | 迁移检索：区间内 What's New 变更文档 + 目标版本规范 |
 | GET | `/api/knowledge/search/security` | 安全规范语义检索 |
 | POST | `/api/reviews` | 创建并同步执行 Code Review |
 | GET | `/api/reviews/{review_id}` | 查询 Review 结果（含项目级 Fix Prompt） |
