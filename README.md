@@ -9,8 +9,10 @@
 - [x] Phase 1：项目初始化（FastAPI + React + Docker Compose 骨架）
 - [x] Phase 2：项目上传与结构分析（安全解压 + 语言/依赖文件识别）
 - [x] Phase 3：依赖与版本识别（只读依赖文件不猜测，范围约束待用户确认）
-- [x] Phase 4：RAG 知识库（BGE-M3 本地 Embedding + Qdrant 版本敏感检索）
-- [ ] Phase 5+：Code Review 流程、LangGraph、Migration...（待开发）
+- [x] Phase 4：RAG 知识库（BGE-M3 本地 Embedding + Qdrant 入库/分块/元数据）
+- [x] Phase 5：Official Retriever（technology + version 硬性过滤检索官方文档）
+- [x] Phase 6：Security Retriever（安全规范语义检索，独立 collection 不按版本过滤）
+- [ ] Phase 7+：LangGraph、Review Agent、Structured Output、Fix Prompt、Migration...（待开发）
 
 ## 技术栈
 
@@ -82,8 +84,9 @@ docker compose up --build
 | POST | /api/projects/upload | 上传项目 zip（≤50MB），返回结构分析与版本识别 |
 | GET | /api/projects/{project_id} | 查询项目分析结果 |
 | POST | /api/projects/{project_id}/versions | 确认/覆盖技术版本 |
-| POST | /api/knowledge/ingest | 扫描 knowledge/official 并入库 Qdrant（首次需加载 BGE-M3） |
-| GET | /api/knowledge/search?technology=&version=&query= | 版本敏感检索（technology 与 version 必填，绝不跨版本返回） |
+| POST | /api/knowledge/ingest | 扫描 knowledge/official 与 knowledge/security 并入库 Qdrant（首次需加载 BGE-M3） |
+| GET | /api/knowledge/search?technology=&version=&query= | Official Retriever：版本敏感检索（technology 与 version 必填，绝不跨版本返回） |
+| GET | /api/knowledge/search/security?query= | Security Retriever：安全规范语义检索（与技术版本无关） |
 
 版本识别规则（规格第 9 节）：精确锁定（`==`、锁文件）直接采用；范围约束（`>=`、`^`、`~`）标记为待确认，**绝不猜测**，由用户指定。支持 requirements.txt、pyproject.toml、package.json、package-lock.json、poetry.lock、uv.lock；yarn.lock / pnpm-lock.yaml 会被检测到但 V1 不解析。
 
@@ -91,11 +94,13 @@ docker compose up --build
 
 可用 `python scripts/make_sample.py` 生成测试样例项目（位于 test_sample/，已排除在 Git 之外）。
 
-## RAG 知识库（Phase 4）
+## RAG 知识库（Phase 4~6）
 
-- 知识目录结构即元数据：`knowledge/official/{technology}/{version}/...` → 向量的 `technology`/`version` payload
+- 知识目录结构即元数据：`knowledge/official/{technology}/{version}/...` → 向量的 `technology`/`version` payload；每块携带规格要求的完整元数据（technology / version / source_type / document_type / topic）
+- 两个 collection：`official_docs`（按版本过滤）与 `security_docs`（平铺目录，固定 technology=general、version=latest，不按版本过滤）
 - 入库：`POST /api/knowledge/ingest`（确定性块 ID，重复入库幂等）
-- 检索：`GET /api/knowledge/search`，Qdrant metadata filter 硬性隔离版本（已验证：用 0.120 概念查 0.110 不会泄漏 0.120 文档）
+- Official Retriever：`GET /api/knowledge/search`，Qdrant metadata filter 硬性隔离版本（已验证：用 0.120 概念查 0.110 不会泄漏 0.120 文档）
+- Security Retriever：`GET /api/knowledge/search/security`（已验证：密码存储问题命中 password 规范，注入问题命中输入验证规范）
 - Embedding：BGE-M3 本地运行（首次从 HuggingFace 下载 2.3GB，国内建议设 `HF_ENDPOINT=https://hf-mirror.com`）
 - 验证脚本：`scripts\test_bge_m3.py`（模型加载+维度）、`scripts\test_qdrant_connection.py`（向量库四步测试）
 
@@ -114,4 +119,4 @@ docker compose up --build
 
 - Qdrant 采用 Windows 本地原生可执行程序运行（双击 `tools\qdrant\start-qdrant.bat`）；因本机 Docker Desktop 不稳定，已弃用 Docker 方式（compose 文件保留作参考）。
 - BGE-M3 模型首次加载需下载（已缓存于 `~/.cache/huggingface`）；CPU 推理，入库/检索速度满足开发需求。
-- 当前知识库仅含 fastapi 0.110/0.120 样例文档，真实文档在后续 Phase 填充。
+- 当前知识库仅含 fastapi 0.110/0.120 官方样例文档与 3 份通用安全规范样例（密码、输入验证、认证授权），真实文档在后续按需填充。

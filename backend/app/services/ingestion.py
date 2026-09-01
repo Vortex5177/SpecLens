@@ -3,10 +3,15 @@
 规格核心设计：目录结构即版本元数据来源。
 knowledge/official/{technology}/{version}/... 中的前两级目录名
 直接作为向量的 payload（technology、version），检索时据此做硬性过滤。
+安全规范放在 knowledge/security/ 平铺目录，固定 technology=general、version=latest。
+
+每个块携带规格第 12 节要求的完整元数据：
+technology / version / source_type / document_type / topic。
 
 流程：扫描目录 -> 按扩展名过滤 -> 分块 -> Embedding -> 写入 Qdrant。
 """
 import uuid
+from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -27,14 +32,19 @@ def get_qdrant_client() -> QdrantClient:
     return QdrantClient(url=config.QDRANT_URL)
 
 
-def ensure_collection(client: QdrantClient) -> None:
-    """确保 collection 存在（1024 维余弦），并为过滤字段建 payload 索引。"""
-    if not client.collection_exists(config.QDRANT_COLLECTION):
-        client.create_collection(
-            collection_name=config.QDRANT_COLLECTION,
-            vectors_config=VectorParams(size=config.BGE_M3_DIM, distance=Distance.COSINE),
-        )
-    # technology/version 是每次检索必用的过滤字段，建索引加速。
+def ensure_collections(client: QdrantClient) -> None:
+    """确保官方文档与安全规范两个 collection 存在（1024 维余弦）。
+
+    官方文档额外为过滤字段建 payload 索引；
+    安全规范不按版本过滤，无需索引。
+    """
+    for collection in (config.QDRANT_COLLECTION, config.QDRANT_SECURITY_COLLECTION):
+        if not client.collection_exists(collection):
+            client.create_collection(
+                collection_name=collection,
+                vectors_config=VectorParams(size=config.BGE_M3_DIM, distance=Distance.COSINE),
+            )
+    # technology/version 是官方文档每次检索必用的过滤字段，建索引加速。
     # 注意：langchain-qdrant 把 Document.metadata 嵌套存放在 payload.metadata 下，
     # 因此索引与过滤都要用 metadata.* 路径。
     for field in ("metadata.technology", "metadata.version"):
@@ -45,7 +55,24 @@ def ensure_collection(client: QdrantClient) -> None:
         )
 
 
-def _collect_documents() -> list[Document]:
+def _chunk_file(file_path: Path, metadata: dict) -> list[Document]:
+    """将单个知识文件分块为带元数据的 Document 列表（确定性 ID 保证幂等）。"""
+    text = file_path.read_text(encoding="utf-8", errors="ignore")
+    source = file_path.relative_to(config.KNOWLEDGE_DIR).as_posix()
+    documents: list[Document] = []
+    for index, chunk in enumerate(_splitter.split_text(text)):
+        # 确定性 ID：同一文档重复入库会覆盖旧块，保证幂等
+        documents.append(
+            Document(
+                page_content=chunk,
+                metadata=metadata | {"source": source, "chunk_index": index},
+                id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source}#{index}")),
+            )
+        )
+    return documents
+
+
+def _collect_official_documents() -> list[Document]:
     """扫描 knowledge/official/{technology}/{version}/，构造带元数据的分块文档。"""
     official = config.KNOWLEDGE_DIR / "official"
     documents: list[Document] = []
@@ -57,45 +84,79 @@ def _collect_documents() -> list[Document]:
             for file_path in sorted(version_dir.rglob("*")):
                 if file_path.suffix.lower() not in config.KNOWLEDGE_EXTENSIONS:
                     continue
-                text = file_path.read_text(encoding="utf-8", errors="ignore")
-                for index, chunk in enumerate(_splitter.split_text(text)):
-                    # 确定性 ID：同一文档重复入库会覆盖旧块，保证幂等
-                    source = file_path.relative_to(config.KNOWLEDGE_DIR).as_posix()
-                    documents.append(
-                        Document(
-                            page_content=chunk,
-                            metadata={
-                                "technology": tech_dir.name,
-                                "version": version_dir.name,
-                                "source": source,
-                                "chunk_index": index,
-                            },
-                            id=str(uuid.uuid5(uuid.NAMESPACE_URL, f"{source}#{index}")),
-                        )
+                documents.extend(
+                    _chunk_file(
+                        file_path,
+                        {
+                            "technology": tech_dir.name,
+                            "version": version_dir.name,
+                            "source_type": "official",
+                            "document_type": "official_doc",
+                            # topic 取文件名（不含扩展名），如 dependencies
+                            "topic": file_path.stem,
+                        },
                     )
+                )
+    return documents
+
+
+def _collect_security_documents() -> list[Document]:
+    """扫描 knowledge/security/ 平铺目录（规格第 12 节：technology=general、version=latest）。"""
+    security = config.KNOWLEDGE_DIR / "security"
+    documents: list[Document] = []
+    if not security.is_dir():
+        return documents
+
+    for file_path in sorted(security.rglob("*")):
+        if not file_path.is_file() or file_path.suffix.lower() not in config.KNOWLEDGE_EXTENSIONS:
+            continue
+        documents.extend(
+            _chunk_file(
+                file_path,
+                {
+                    "technology": "general",
+                    "version": "latest",
+                    "source_type": "security",
+                    "document_type": "security_rule",
+                    "topic": file_path.stem,
+                },
+            )
+        )
     return documents
 
 
 def ingest_knowledge() -> dict:
-    """执行一次全量入库，返回统计信息。"""
-    documents = _collect_documents()
+    """执行一次全量入库（官方文档 + 安全规范），返回统计信息。"""
+    official_docs = _collect_official_documents()
+    security_docs = _collect_security_documents()
     client = get_qdrant_client()
-    ensure_collection(client)
+    ensure_collections(client)
 
-    if documents:
-        # QdrantVectorStore 封装 Embedding + 批量写入
-        from langchain_qdrant import QdrantVectorStore
+    # QdrantVectorStore 封装 Embedding + 批量写入
+    from langchain_qdrant import QdrantVectorStore
 
+    def _write(collection: str, documents: list[Document]) -> None:
+        if not documents:
+            return
         store = QdrantVectorStore(
             client=client,
-            collection_name=config.QDRANT_COLLECTION,
+            collection_name=collection,
             embedding=get_embeddings(),
         )
         store.add_documents(documents, batch_size=16)
 
-    sources = {d.metadata["source"] for d in documents}
+    _write(config.QDRANT_COLLECTION, official_docs)
+    _write(config.QDRANT_SECURITY_COLLECTION, security_docs)
+
     return {
-        "files_ingested": len(sources),
-        "chunks_ingested": len(documents),
-        "collection": config.QDRANT_COLLECTION,
+        "official": {
+            "files_ingested": len({d.metadata["source"] for d in official_docs}),
+            "chunks_ingested": len(official_docs),
+            "collection": config.QDRANT_COLLECTION,
+        },
+        "security": {
+            "files_ingested": len({d.metadata["source"] for d in security_docs}),
+            "chunks_ingested": len(security_docs),
+            "collection": config.QDRANT_SECURITY_COLLECTION,
+        },
     }

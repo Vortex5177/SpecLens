@@ -36,13 +36,15 @@ DEPENDENCY_FILES = {
 # 文件树展示上限（避免超大项目撑爆响应）
 MAX_TREE_ENTRIES = 500
 
-# ===== RAG / 知识库（Phase 4）=====
+# ===== RAG / 知识库（Phase 4~6）=====
 # 预置知识库目录（按 technology/version 组织）
 KNOWLEDGE_DIR = Path(os.getenv("KNOWLEDGE_DIR", Path(__file__).resolve().parents[2] / "knowledge"))
 # Qdrant 服务地址（本地原生运行默认 6333；禁止使用嵌入式 :memory:）
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-# 官方文档 collection 名称
+# 官方文档 collection（Phase 5 Official Retriever 使用）
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "official_docs")
+# 安全规范 collection（Phase 6 Security Retriever 使用，不按版本过滤）
+QDRANT_SECURITY_COLLECTION = os.getenv("QDRANT_SECURITY_COLLECTION", "security_docs")
 # BGE-M3 向量维度（模型固定 1024 维，不得修改）
 BGE_M3_DIM = 1024
 # Embedding 模型（本地运行；国内网络可在 .env 中设置 HF_ENDPOINT=https://hf-mirror.com）
