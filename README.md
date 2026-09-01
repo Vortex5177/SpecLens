@@ -1,176 +1,154 @@
 # Version-Aware AI Code Reviewer
 
-面向开发者的版本敏感 AI 代码审查与迁移分析工具（Version-Aware AI Code Review & Migration Tool）：针对用户确认的技术版本，结合对应版本的官方文档与安全规范进行 Code Review；或对比当前/目标两个版本的规范，分析升级迁移需要调整的地方。两种模式都会生成可直接交给 AI Coding 工具的 Fix Prompt。
+版本敏感的 AI 代码审查与迁移分析工具。针对项目实际使用的技术版本，结合**对应版本**的官方文档与安全规范进行 Code Review；或对比当前版本与目标版本的规范差异，分析升级迁移需要调整的地方。两种模式都会生成可直接交给任意 AI Coding 工具执行的 **Fix Prompt**。
 
-> 本项目只发现问题、给出依据与建议，**不自动修改用户代码**。
+> 本项目只发现问题、给出依据与建议，不自动修改用户代码。
 
-## 当前进度
+## 核心特性
 
-- [x] Phase 1：项目初始化（FastAPI + React + Docker Compose 骨架）
-- [x] Phase 2：项目上传与结构分析（安全解压 + 语言/依赖文件识别）
-- [x] Phase 3：依赖与版本识别（只读依赖文件不猜测，范围约束待用户确认）
-- [x] Phase 4：RAG 知识库（BGE-M3 本地 Embedding + Qdrant 入库/分块/元数据）
-- [x] Phase 5：Official Retriever（technology + version 硬性过滤检索官方文档）
-- [x] Phase 6：Security Retriever（安全规范语义检索，独立 collection 不按版本过滤）
-- [x] Phase 7：LangGraph 流程（analyze_project → review → generate_result）
-- [x] Phase 8：Review Agent（单 Agent + 4 个只读工具，动态选择审查上下文）
-- [x] Phase 9：Structured Output（Pydantic 强约束的 Issue 列表）
-- [x] Phase 10：Fix Prompt（单问题 + 项目级，模板确定性生成）
-- [x] Phase 11：Migration（与 Review 共用引擎，对比当前/目标两版本规范）
-- [x] Phase 12：前端整合（上传 → 版本确认 → Code Review / Migration 全流程）
-- [x] Phase 14：README 与完整运行说明（本文档）
-- [~] Phase 13：Docker Compose — **已决定跳过**：本机原生方式已完整跑通，且本机 Docker Desktop 不稳定；文件保留备用（见下方说明）
+- **版本敏感检索**：官方文档按 `technology + version` 硬性过滤，绝不跨版本返回结果；知识库中没有证据时明确标注 `llm_inference`，不伪造官方依据
+- **绝不猜测版本**：只读依赖文件识别版本；精确锁定（`==`、锁文件）直接采用，范围约束（`>=`、`^`、`~`）必须由用户确认后才允许审查
+- **Code Review**：单 Agent 动态调用只读工具收集上下文，输出 Pydantic 强约束的结构化问题列表（文件 / 行号 / 类别 / 严重级别 / 置信度 / 证据 / 建议）
+- **Migration**：同一引擎对比两个版本的规范，产出「当前行为 → 目标行为」的迁移调整点
+- **Fix Prompt**：每个问题与项目级汇总均由模板确定性生成（不再调 LLM），可直接粘贴给 AI Coding 工具
+
+## 架构
+
+```text
+前端（React + Vite，:5173）
+    │  REST /api
+后端（FastAPI，:8000）
+    │  LangGraph 流水线
+    ▼
+analyze_project ──→ review ──→ generate_result
+（确定性：解析项目、      （单 Agent + 4 个只读工具，    （确定性模板：
+  校验版本已确认）         动态检索并生成结构化结果）       生成 Fix Prompt）
+                            │
+                            ▼
+                  Qdrant（BGE-M3 本地 Embedding）
+              official_docs（按版本过滤） │ security_docs（通用安全规范）
+```
+
+职责划分：LangGraph 管流程，Agent 管上下文选择，LLM 管判断，RAG 管检索，Fix Prompt 由模板确定性生成。
 
 ## 技术栈
 
 | 层 | 技术 |
 |---|---|
-| 后端 | Python 3.12+ / FastAPI / LangChain / LangGraph / Pydantic |
-| RAG | BGE-M3（本地 Embedding）+ Qdrant（Windows 本地原生运行，不用 Docker） |
-| 前端 | React + Vite（开发模式代理 /api 到后端 8000） |
+| 后端 | Python 3.12+ / FastAPI / Pydantic v2 |
+| AI 编排 | LangChain / LangGraph（`create_agent` + Structured Output） |
+| RAG | BGE-M3（本地 Embedding）+ Qdrant（向量库，按版本元数据过滤） |
+| 前端 | React 18 + Vite（开发模式代理 `/api` 到后端） |
 | LLM | DeepSeek API（OpenAI 兼容接口） |
-| 部署 | 本地开发为主；docker-compose 仅作备用参考 |
 
-## 本地开发运行（不使用 Docker）
+## 项目结构
 
-### 后端
+```
+├── backend/              # FastAPI 后端
+│   └── app/
+│       ├── api/          # 路由层：project / version / knowledge / review / migration / health
+│       ├── graph/        # LangGraph：state、tools、nodes（analyze / review / result）
+│       ├── models/       # Pydantic 请求/响应/结构化输出模型
+│       └── services/     # 上传解压、依赖解析、RAG 检索
+├── frontend/             # React + Vite 前端（单页：上传 → 版本确认 → 审查/迁移）
+├── knowledge/            # 知识库源文件
+│   ├── official/{technology}/{version}/   # 官方文档（目录结构即元数据）
+│   └── security/                          # 通用安全规范
+├── tools/qdrant/         # Qdrant 本地运行：可执行文件 + 启停脚本 + 数据目录
+├── scripts/              # 辅助脚本（生成测试样例、连通性测试等）
+└── uploads/              # 上传项目与审查结果（运行时产物，不入版本库）
+```
+
+## 快速上手
+
+### 前置条件
+
+- Python 3.12+、Node.js 18+
+- Qdrant：从 [官方 releases](https://github.com/qdrant/qdrant/releases/latest) 下载可执行文件（Windows / Linux / macOS 均支持），或使用 `docker run -p 6333:6333 qdrant/qdrant`，默认监听 `http://localhost:6333`
+- DeepSeek API Key（或其他兼容 OpenAI 接口的服务）
+
+### 1. 配置后端环境
 
 ```powershell
 cd backend
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1      # Windows；Linux/macOS 用 source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
+copy .env.example .env             # 然后填入 DEEPSEEK_API_KEY
 ```
 
-### 前端
+`.env` 关键配置：
+
+| 变量 | 说明 |
+|---|---|
+| `DEEPSEEK_API_KEY` | LLM API Key（必填） |
+| `QDRANT_URL` | 默认 `http://localhost:6333` |
+| `ALLOWED_ORIGINS` | 前端来源，默认 `http://localhost:5173` |
+| `HF_ENDPOINT` | 可选，国内建议 `https://hf-mirror.com` 加速下载 BGE-M3 |
+
+### 2. 知识库入库
+
+向 `knowledge/` 放入文档后调用一次：
+
+```
+POST /api/knowledge/ingest
+```
+
+目录结构即元数据：`knowledge/official/fastapi/0.120/xxx.md` 的每个分块会携带 `technology=fastapi, version=0.120`。重复入库幂等（确定性块 ID）。首次调用需加载 BGE-M3 模型（约 2.3GB，首次从 HuggingFace 下载）。
+
+### 3. 启动
 
 ```powershell
+# 终端 1：后端
+cd backend
+uvicorn app.main:app --reload --port 8000
+
+# 终端 2：前端
 cd frontend
 npm install
 npm run dev
 ```
 
-浏览器打开 <http://localhost:5173>，看到"后端已连接"即表示骨架运行正常。
+打开 <http://localhost:5173>，看到「后端已连接」即可使用。
 
-也可直接运行根目录 `.\dev.ps1` 一键启动前后端。
+## 使用流程
 
-### 环境变量
+1. **上传**：选择项目 zip（≤50MB）上传，页面展示语言 / 依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例
+2. **版本确认**：精确锁定的版本自动采用；范围约束标记为「待确认」，需手动填写并确认。所有技术确认前审查按钮保持禁用
+3. **选择模式并开始**：
+   - Code Review：直接点「开始审查」
+   - Migration：填写至少一个目标版本后点「开始迁移分析」
+4. **查看结果**：严重级别统计 + 问题卡片（文件 / 行号 / 描述 / 可折叠证据 / 建议）；每个问题有 **Copy Fix Prompt**，页面级有 **Copy Project Fix Prompt**
 
-复制 `backend/.env.example` 为 `backend/.env` 并填入真实值（`.env` 不会进入 Git）。
+审查为同步接口，视项目规模约 30~120 秒。
 
-### Qdrant（Windows 本地原生，不用 Docker）
-
-1. 从 <https://github.com/qdrant/qdrant/releases/latest> 下载 `qdrant-x86_64-pc-windows-msvc.zip`（当前 v1.19.0）
-2. 解压后把 `qdrant.exe` 放入 `tools\qdrant\`
-3. 双击 `tools\qdrant\start-qdrant.bat` 启动（数据持久化在 `tools\qdrant\storage\`）
-4. 验证：`Invoke-RestMethod http://localhost:6333/healthz`
-5. 连通性测试：`.\backend\.venv\Scripts\python.exe scripts\test_qdrant_connection.py`
-6. （可选）Web UI：另下载 qdrant-web-ui 的 `dist-qdrant.zip`，解压出 `static\` 放到 `tools\qdrant\` 后重启，访问 <http://localhost:6333/dashboard>
-
-详见 [tools/qdrant/README.md](tools/qdrant/README.md)。
-
-## Docker 运行（备用，不作为主要方式）
-
-> 本机 Docker Desktop 存在稳定性问题（引擎崩溃/内存泄漏），日常开发不使用；文件保留仅供容器化部署参考。
-
-```powershell
-docker compose up --build
-```
-
-- 前端：<http://localhost:5173>
-- 后端：<http://localhost:8000/api/health>
-- Qdrant：<http://localhost:6333>
-
-## API（当前可用）
+## API
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | /api/health | 健康检查 |
-| GET | /api/version | 应用版本 |
-| POST | /api/projects/upload | 上传项目 zip（≤50MB），返回结构分析与版本识别 |
-| GET | /api/projects/{project_id} | 查询项目分析结果 |
-| POST | /api/projects/{project_id}/versions | 确认/覆盖技术版本 |
-| POST | /api/knowledge/ingest | 扫描 knowledge/official 与 knowledge/security 并入库 Qdrant（首次需加载 BGE-M3） |
-| GET | /api/knowledge/search?technology=&version=&query= | Official Retriever：版本敏感检索（technology 与 version 必填，绝不跨版本返回） |
-| GET | /api/knowledge/search/security?query= | Security Retriever：安全规范语义检索（与技术版本无关） |
-| POST | /api/reviews | 创建并同步执行 Code Review（要求项目所有技术版本已确认） |
-| GET | /api/reviews/{review_id} | 查询 Review 结果（V1 中 review_id 即 project_id，含项目级 Fix Prompt） |
-| POST | /api/migrations | 创建并同步执行 Migration（请求体含 project_id + target_versions 目标版本列表） |
-| GET | /api/migrations/{migration_id} | 查询 Migration 结果（migration_id 即 project_id，含项目级迁移 Fix Prompt） |
+| GET | `/api/health` | 健康检查 |
+| GET | `/api/version` | 应用版本 |
+| POST | `/api/projects/upload` | 上传项目 zip，返回结构分析与版本识别 |
+| GET | `/api/projects/{project_id}` | 查询项目分析结果 |
+| POST | `/api/projects/{project_id}/versions` | 确认 / 覆盖技术版本 |
+| POST | `/api/knowledge/ingest` | 扫描 knowledge/ 并入库 Qdrant |
+| GET | `/api/knowledge/search` | 版本敏感的官方文档检索（technology + version 必填） |
+| GET | `/api/knowledge/search/security` | 安全规范语义检索 |
+| POST | `/api/reviews` | 创建并同步执行 Code Review |
+| GET | `/api/reviews/{review_id}` | 查询 Review 结果（含项目级 Fix Prompt） |
+| POST | `/api/migrations` | 创建并同步执行 Migration（含目标版本列表） |
+| GET | `/api/migrations/{migration_id}` | 查询 Migration 结果（含项目级迁移 Fix Prompt） |
 
-版本识别规则（规格第 9 节）：精确锁定（`==`、锁文件）直接采用；范围约束（`>=`、`^`、`~`）标记为待确认，**绝不猜测**，由用户指定。支持 requirements.txt、pyproject.toml、package.json、package-lock.json、poetry.lock、uv.lock；yarn.lock / pnpm-lock.yaml 会被检测到但 V1 不解析。
+交互式文档：启动后端后访问 <http://localhost:8000/docs>。
 
-上传限制与忽略规则（路径穿越防护、防 zip 炸弹、跳过 `.env`/`node_modules` 等）集中在 `backend/app/config.py`。
+## 安全边界
 
-可用 `python scripts/make_sample.py` 生成测试样例项目（位于 test_sample/，已排除在 Git 之外）。
+- 上传：路径穿越防护、防 zip 炸弹、大小限制，自动跳过 `.env` / `node_modules` 等
+- Agent 工具全部只读，且限制在项目目录内；官方文档检索强制使用已确认版本，传入未确认版本直接拒绝
+- 证据规则：问题依据必须来自检索结果，无证据时标注 `llm_inference`，禁止伪造官方文档依据
 
-## RAG 知识库（Phase 4~6）
+## 已知限制
 
-- 知识目录结构即元数据：`knowledge/official/{technology}/{version}/...` → 向量的 `technology`/`version` payload；每块携带规格要求的完整元数据（technology / version / source_type / document_type / topic）
-- 两个 collection：`official_docs`（按版本过滤）与 `security_docs`（平铺目录，固定 technology=general、version=latest，不按版本过滤）
-- 入库：`POST /api/knowledge/ingest`（确定性块 ID，重复入库幂等）
-- Official Retriever：`GET /api/knowledge/search`，Qdrant metadata filter 硬性隔离版本（已验证：用 0.120 概念查 0.110 不会泄漏 0.120 文档）
-- Security Retriever：`GET /api/knowledge/search/security`（已验证：密码存储问题命中 password 规范，注入问题命中输入验证规范）
-- Embedding：BGE-M3 本地运行（首次从 HuggingFace 下载 2.3GB，国内建议设 `HF_ENDPOINT=https://hf-mirror.com`）
-- 验证脚本：`scripts\test_bge_m3.py`（模型加载+维度）、`scripts\test_qdrant_connection.py`（向量库四步测试）
-
-## Code Review 流程（Phase 7~10）
-
-```text
-POST /api/reviews
-    ↓
-LangGraph：analyze_project → review → generate_result
-    │              │                  │
-    │              │                  └─ 确定性模板生成单问题/项目级 Fix Prompt（不调 LLM）
-    │              └─ 单 Agent（create_agent + response_format=ReviewResult）
-    │                 工具：list_files / read_file / search_official_docs / search_security_rules
-    └─ 确定性：读 meta、校验版本已全部确认、选取源码文件构建上下文
-```
-
-- 职责划分（规格原则 3）：LangGraph 管流程、Agent 管上下文选择、LLM 管判断、RAG 管检索
-- 证据规则（规格第 21 节）：依据必须来自检索结果；知识库无证据时 `source=llm_inference`，禁止伪造官方依据
-- 安全边界：Agent 工具全部只读且限制在项目目录内（防路径穿越）；官方文档检索强制使用已确认版本，传入其他版本直接拒绝
-- LLM：DeepSeek（OpenAI 兼容接口），经 `init_chat_model` 统一入口，配置在 `backend/.env` 的 `DEEPSEEK_API_KEY`
-- 稳定性机制：检索工具内置调用次数硬上限（官方文档 3 次 / 安全规范 2 次）、`[终止]` 信号强制中断、Agent 步数上限，以及结构化输出缺失时的二次 LLM 汇总兜底；版本归一化处理 `0.120.0` 与 `0.120` 等价（尾部 `.0` 剥离）
-
-## Migration 流程（Phase 11，规格第 19 节）
-
-与 Code Review **共用同一条 LangGraph 流水线**，差异只在 mode 分支：
-
-- 输入多一个目标版本集合（`target_versions`），目标技术必须是已确认技术且版本不同于当前版本
-- Agent 的官方文档检索同时允许「当前版本 + 目标版本」，分别检索后对比：找出目标版本中废弃、修改或新增的用法
-- 结构化输出为 `MigrationIssue`：`current_behavior` / `target_behavior` / `reason` / `suggested_change`
-- Fix Prompt 同样由 `generate_result` 模板确定性生成（迁移 Fix Prompt 要求给出逐步迁移方案）
-- 结果持久化在 `uploads/{project_id}/migration.json`，重复迁移覆盖旧结果
-- 演示样例：`scripts/migration_demo/` 下有 fastapi 0.110 项目 zip，迁移目标填 `0.120` 即可复现双版本对比效果（约 30 秒）
-
-## 端到端使用流程（前端）
-
-前置：按上方顺序启动 Qdrant → 后端 → 前端，打开 <http://localhost:5173>。
-
-1. **上传**：选择项目 zip（≤50MB）上传，页面展示语言/依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例 `test_sample/demo.zip`。
-2. **版本确认**：精确锁定的版本自动采用；范围约束标记为“待确认”，需手动填写后点“确认版本”。所有技术确认前审查按钮保持禁用（规格第 9 节：绝不猜测）。
-3. **选择模式并开始**：
-   - Code Review：直接点“开始审查”（同步接口，约 30~120 秒）
-   - Migration：填写至少一个目标版本后点“开始迁移分析”
-4. **查看结果**：统计条（High / Medium / Low）+ 问题卡片（文件/行号/描述/可折叠证据/建议）；每个问题有 **Copy Fix Prompt**，页面级有 **Copy Project Fix Prompt**，可直接粘贴给任意 AI Coding 工具执行修复。
-
-## 目录结构
-
-```
-├── backend/      # FastAPI 后端（app/ 内按 api 路由分层）
-├── frontend/     # React + Vite 前端
-├── knowledge/    # 预置知识库：official/（官方文档）、security/（安全规范）
-├── tools/qdrant/ # Qdrant 本地运行：可执行文件（手动下载）+ 启停脚本 + 数据目录
-├── docker-compose.yml
-└── dev.ps1       # Windows 开发环境一键启动
-```
-
-## 已知限制与决策
-
-- Qdrant 采用 Windows 本地原生可执行程序运行（双击 `tools\qdrant\start-qdrant.bat`）；因本机 Docker Desktop 不稳定，已弃用 Docker 方式（compose 文件保留作参考）。
-- **Phase 13（Docker Compose）已决定跳过**：本机原生方式已完整跑通两条端到端链路，容器化对学习项目无实际价值；若将来需要，`docker-compose.yml` 与 Dockerfile 均在仓库中，可随时恢复验证。
-- BGE-M3 模型首次加载需下载（已缓存于 `~/.cache/huggingface`）；CPU 推理，入库/检索速度满足开发需求。后端重启后首个涉及检索的请求会因重新加载模型（约 2.3GB）而明显变慢，属正常现象。
-- 当前知识库仅含 fastapi 0.110/0.120 官方样例文档与 3 份通用安全规范样例（密码、输入验证、认证授权），真实文档在后续按需填充；功能链路完整，但检索覆盖面小，部分结论会退化为 `llm_inference`。
-- 审查/迁移为同步接口，实测约 30~120 秒；前端期间禁用按钮并提示等待，不设异步任务队列（保持最小实现）。
+- 仓库内置的 `knowledge/` 仅为样例文档（fastapi 0.110/0.120 + 3 份通用安全规范），实际使用请自行填充目标技术与版本的官方文档
+- BGE-M3 为 CPU 本地推理，满足开发规模；后端重启后首个检索请求会因重新加载模型而变慢
+- 审查 / 迁移为同步接口，未实现异步任务队列
