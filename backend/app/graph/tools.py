@@ -27,12 +27,21 @@ def _norm_version(v: str) -> str:
     return v
 
 
-def build_tools(project_path: Path, confirmed_versions: dict[str, str], file_tree: list[str]):
+def build_tools(
+    project_path: Path,
+    confirmed_versions: dict[str, str],
+    file_tree: list[str],
+    target_versions: dict[str, str] | None = None,
+):
     """按项目作用域构造工具（闭包绑定项目路径与已确认版本）。
+
+    Migration 模式（Phase 11）传入 target_versions 后，官方文档检索同时允许
+    当前版本与目标版本（规格第 19 节：检索两个版本规范）。
 
     为避免 LLM 陷入无限工具调用循环，search_official_docs 与
     search_security_rules 内置调用计数器，超过硬上限后返回提示让 Agent 停止。
     """
+    target_versions = target_versions or {}
     # 硬上限：防止 LLM 无限调用（规格要求每个维度最多 2 次检索）
     call_counts = {"official": 0, "security": 0}
     OFFICIAL_LIMIT = 3
@@ -65,24 +74,30 @@ def build_tools(project_path: Path, confirmed_versions: dict[str, str], file_tre
     def search_official_docs(technology: str, version: str, query: str) -> str:
         """检索指定技术版本的官方文档（版本敏感，绝不跨版本返回）。
 
-        参数必须是用户已确认的技术与版本，否则会被拒绝。
+        参数必须是已允许的技术与版本（当前已确认版本，
+        Migration 模式下还包括用户指定的目标版本），否则会被拒绝。
         用于核实 API 用法、参数、版本行为与推荐写法。
         """
         call_counts["official"] += 1
         if call_counts["official"] > OFFICIAL_LIMIT:
             return (
                 f"[终止] 官方文档检索已达上限 {OFFICIAL_LIMIT} 次，禁止继续调用。"
-                "请直接用已有证据（或 llm_inference）生成最终 ReviewResult。"
+                "请直接用已有证据（或 llm_inference）生成最终结果。"
             )
         tech = technology.lower()
         expected = confirmed_versions.get(tech)
         if expected is None:
             return f"[错误] 未检测到技术 {technology}，可检索的技术：{', '.join(confirmed_versions) or '无'}"
-        # 版本归一化：0.120.0 与 0.120 视为相同
-        if _norm_version(version) != _norm_version(expected):
+        # 合法版本集合：当前已确认版本 +（Migration 时）目标版本，归一化后比较
+        allowed = {_norm_version(expected)}
+        target = target_versions.get(tech)
+        if target:
+            allowed.add(_norm_version(target))
+        if _norm_version(version) not in allowed:
+            allowed_text = " 或 ".join(sorted(allowed))
             return (
-                f"[错误] 版本 {version} 未经用户确认。{technology} 已确认的版本是 {expected}，"
-                "检索必须使用已确认版本"
+                f"[错误] 版本 {version} 不在允许范围内。{technology} 允许检索的版本是 {allowed_text}，"
+                "检索必须使用这些版本"
             )
         results = retrieval.search_official_docs(tech, _norm_version(version), query, limit=5)
         if not results:
@@ -104,7 +119,7 @@ def build_tools(project_path: Path, confirmed_versions: dict[str, str], file_tre
         if call_counts["security"] > SECURITY_LIMIT:
             return (
                 f"[终止] 安全规范检索已达上限 {SECURITY_LIMIT} 次，禁止继续调用。"
-                "请直接用已有证据生成最终 ReviewResult。"
+                "请直接用已有证据生成最终结果。"
             )
         results = retrieval.search_security_docs(query, limit=5)
         if not results:

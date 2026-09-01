@@ -208,3 +208,258 @@ h1 {
   background: #91caff;
   cursor: not-allowed;
 }
+
+/* ===== 审查模式面板 ===== */
+.review-panel {
+  margin-top: 24px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  text-align: left;
+}
+
+.review-panel h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.mode-options {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.mode-options label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+/* ===== Migration 目标版本表 ===== */
+.migration-targets {
+  margin-bottom: 16px;
+}
+
+.migration-targets .version-table {
+  margin-top: 8px;
+}
+
+.mode-disabled {
+  color: #bbb;
+  cursor: not-allowed !important;
+}
+
+.review-panel button {
+  padding: 8px 28px;
+  border: none;
+  border-radius: 6px;
+  background: #1677ff;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.review-panel button:disabled {
+  background: #91caff;
+  cursor: not-allowed;
+}
+
+/* ===== 审查结果 ===== */
+.review-result {
+  margin-top: 24px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  text-align: left;
+}
+
+.review-result h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.review-result .summary {
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.severity-stats {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.badge-high {
+  background: #fff1f0;
+  color: #cf1322;
+}
+
+.badge-medium {
+  background: #fff7e6;
+  color: #ad6800;
+}
+
+.badge-low {
+  background: #f0f5ff;
+  color: #1677ff;
+}
+
+.badge-category {
+  background: #f6ffed;
+  color: #389e0d;
+}
+
+.issue {
+  border: 1px solid #f0f0f0;
+  border-left-width: 4px;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.issue-high {
+  border-left-color: #cf1322;
+}
+
+.issue-medium {
+  border-left-color: #fa8c16;
+}
+
+.issue-low {
+  border-left-color: #1677ff;
+}
+
+.issue-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.issue-location {
+  font-size: 13px;
+  color: #666;
+  margin-left: auto;
+}
+
+.issue-location code {
+  background: #f0f5ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.issue h4 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.issue-desc {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+/* Migration：当前行为 vs 目标行为对比块 */
+.behavior-pair {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.behavior {
+  flex: 1;
+  border-radius: 6px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.behavior strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.behavior-current {
+  background: #fff7e6;
+}
+
+.behavior-current strong {
+  color: #ad6800;
+}
+
+.behavior-target {
+  background: #f0f5ff;
+}
+
+.behavior-target strong {
+  color: #1677ff;
+}
+
+.issue-evidence summary {
+  font-size: 13px;
+  color: #1677ff;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+
+.issue-evidence pre {
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px;
+  background: #fafafa;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.issue-suggestion {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+.issue-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.copy-btn {
+  padding: 5px 16px;
+  border: 1px solid #1677ff;
+  border-radius: 6px;
+  background: #fff;
+  color: #1677ff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.copy-btn:hover:not(:disabled) {
+  background: #f0f5ff;
+}
+
+.copy-btn:disabled {
+  border-color: #d9d9d9;
+  color: #bbb;
+  cursor: not-allowed;
+}
+
+.project-fix {
+  margin-top: 8px;
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}

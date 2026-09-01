@@ -1,6 +1,6 @@
 # Version-Aware AI Code Reviewer
 
-面向开发者的版本敏感 AI 代码审查工具：针对用户指定的技术版本，结合对应版本的官方文档与安全规范进行 Code Review，并生成可直接交给 AI Coding 工具的 Fix Prompt。
+面向开发者的版本敏感 AI 代码审查与迁移分析工具（Version-Aware AI Code Review & Migration Tool）：针对用户确认的技术版本，结合对应版本的官方文档与安全规范进行 Code Review；或对比当前/目标两个版本的规范，分析升级迁移需要调整的地方。两种模式都会生成可直接交给 AI Coding 工具的 Fix Prompt。
 
 > 本项目只发现问题、给出依据与建议，**不自动修改用户代码**。
 
@@ -16,7 +16,10 @@
 - [x] Phase 8：Review Agent（单 Agent + 4 个只读工具，动态选择审查上下文）
 - [x] Phase 9：Structured Output（Pydantic 强约束的 Issue 列表）
 - [x] Phase 10：Fix Prompt（单问题 + 项目级，模板确定性生成）
-- [ ] Phase 11+：Migration、前端整合、Docker Compose...（待开发）
+- [x] Phase 11：Migration（与 Review 共用引擎，对比当前/目标两版本规范）
+- [x] Phase 12：前端整合（上传 → 版本确认 → Code Review / Migration 全流程）
+- [x] Phase 14：README 与完整运行说明（本文档）
+- [~] Phase 13：Docker Compose — **已决定跳过**：本机原生方式已完整跑通，且本机 Docker Desktop 不稳定；文件保留备用（见下方说明）
 
 ## 技术栈
 
@@ -24,7 +27,7 @@
 |---|---|
 | 后端 | Python 3.12+ / FastAPI / LangChain / LangGraph / Pydantic |
 | RAG | BGE-M3（本地 Embedding）+ Qdrant（Windows 本地原生运行，不用 Docker） |
-| 前端 | React + Vite |
+| 前端 | React + Vite（开发模式代理 /api 到后端 8000） |
 | LLM | DeepSeek API（OpenAI 兼容接口） |
 | 部署 | 本地开发为主；docker-compose 仅作备用参考 |
 
@@ -93,6 +96,8 @@ docker compose up --build
 | GET | /api/knowledge/search/security?query= | Security Retriever：安全规范语义检索（与技术版本无关） |
 | POST | /api/reviews | 创建并同步执行 Code Review（要求项目所有技术版本已确认） |
 | GET | /api/reviews/{review_id} | 查询 Review 结果（V1 中 review_id 即 project_id，含项目级 Fix Prompt） |
+| POST | /api/migrations | 创建并同步执行 Migration（请求体含 project_id + target_versions 目标版本列表） |
+| GET | /api/migrations/{migration_id} | 查询 Migration 结果（migration_id 即 project_id，含项目级迁移 Fix Prompt） |
 
 版本识别规则（规格第 9 节）：精确锁定（`==`、锁文件）直接采用；范围约束（`>=`、`^`、`~`）标记为待确认，**绝不猜测**，由用户指定。支持 requirements.txt、pyproject.toml、package.json、package-lock.json、poetry.lock、uv.lock；yarn.lock / pnpm-lock.yaml 会被检测到但 V1 不解析。
 
@@ -127,6 +132,29 @@ LangGraph：analyze_project → review → generate_result
 - 证据规则（规格第 21 节）：依据必须来自检索结果；知识库无证据时 `source=llm_inference`，禁止伪造官方依据
 - 安全边界：Agent 工具全部只读且限制在项目目录内（防路径穿越）；官方文档检索强制使用已确认版本，传入其他版本直接拒绝
 - LLM：DeepSeek（OpenAI 兼容接口），经 `init_chat_model` 统一入口，配置在 `backend/.env` 的 `DEEPSEEK_API_KEY`
+- 稳定性机制：检索工具内置调用次数硬上限（官方文档 3 次 / 安全规范 2 次）、`[终止]` 信号强制中断、Agent 步数上限，以及结构化输出缺失时的二次 LLM 汇总兜底；版本归一化处理 `0.120.0` 与 `0.120` 等价（尾部 `.0` 剥离）
+
+## Migration 流程（Phase 11，规格第 19 节）
+
+与 Code Review **共用同一条 LangGraph 流水线**，差异只在 mode 分支：
+
+- 输入多一个目标版本集合（`target_versions`），目标技术必须是已确认技术且版本不同于当前版本
+- Agent 的官方文档检索同时允许「当前版本 + 目标版本」，分别检索后对比：找出目标版本中废弃、修改或新增的用法
+- 结构化输出为 `MigrationIssue`：`current_behavior` / `target_behavior` / `reason` / `suggested_change`
+- Fix Prompt 同样由 `generate_result` 模板确定性生成（迁移 Fix Prompt 要求给出逐步迁移方案）
+- 结果持久化在 `uploads/{project_id}/migration.json`，重复迁移覆盖旧结果
+- 演示样例：`scripts/migration_demo/` 下有 fastapi 0.110 项目 zip，迁移目标填 `0.120` 即可复现双版本对比效果（约 30 秒）
+
+## 端到端使用流程（前端）
+
+前置：按上方顺序启动 Qdrant → 后端 → 前端，打开 <http://localhost:5173>。
+
+1. **上传**：选择项目 zip（≤50MB）上传，页面展示语言/依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例 `test_sample/demo.zip`。
+2. **版本确认**：精确锁定的版本自动采用；范围约束标记为“待确认”，需手动填写后点“确认版本”。所有技术确认前审查按钮保持禁用（规格第 9 节：绝不猜测）。
+3. **选择模式并开始**：
+   - Code Review：直接点“开始审查”（同步接口，约 30~120 秒）
+   - Migration：填写至少一个目标版本后点“开始迁移分析”
+4. **查看结果**：统计条（High / Medium / Low）+ 问题卡片（文件/行号/描述/可折叠证据/建议）；每个问题有 **Copy Fix Prompt**，页面级有 **Copy Project Fix Prompt**，可直接粘贴给任意 AI Coding 工具执行修复。
 
 ## 目录结构
 
@@ -142,5 +170,7 @@ LangGraph：analyze_project → review → generate_result
 ## 已知限制与决策
 
 - Qdrant 采用 Windows 本地原生可执行程序运行（双击 `tools\qdrant\start-qdrant.bat`）；因本机 Docker Desktop 不稳定，已弃用 Docker 方式（compose 文件保留作参考）。
-- BGE-M3 模型首次加载需下载（已缓存于 `~/.cache/huggingface`）；CPU 推理，入库/检索速度满足开发需求。
-- 当前知识库仅含 fastapi 0.110/0.120 官方样例文档与 3 份通用安全规范样例（密码、输入验证、认证授权），真实文档在后续按需填充。
+- **Phase 13（Docker Compose）已决定跳过**：本机原生方式已完整跑通两条端到端链路，容器化对学习项目无实际价值；若将来需要，`docker-compose.yml` 与 Dockerfile 均在仓库中，可随时恢复验证。
+- BGE-M3 模型首次加载需下载（已缓存于 `~/.cache/huggingface`）；CPU 推理，入库/检索速度满足开发需求。后端重启后首个涉及检索的请求会因重新加载模型（约 2.3GB）而明显变慢，属正常现象。
+- 当前知识库仅含 fastapi 0.110/0.120 官方样例文档与 3 份通用安全规范样例（密码、输入验证、认证授权），真实文档在后续按需填充；功能链路完整，但检索覆盖面小，部分结论会退化为 `llm_inference`。
+- 审查/迁移为同步接口，实测约 30~120 秒；前端期间禁用按钮并提示等待，不设异步任务队列（保持最小实现）。

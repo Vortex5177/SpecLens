@@ -10,6 +10,25 @@ from pathlib import Path
 
 from app import config
 from app.graph.state import ReviewState
+from app.graph.tools import _norm_version
+
+
+def _validate_migration_targets(
+    confirmed: dict[str, str], target_versions: dict[str, str]
+) -> str | None:
+    """Migration 目标版本校验（规格第 19 节），返回错误信息或 None。
+
+    规则：目标技术必须是项目已确认的技术，且目标版本与当前版本不同。
+    """
+    if not target_versions:
+        return "请至少选择一个需要迁移的技术及其目标版本"
+    for tech, target in target_versions.items():
+        current = confirmed.get(tech)
+        if current is None:
+            return f"技术 {tech} 不在项目已确认的技术列表中：{', '.join(confirmed)}"
+        if _norm_version(target) == _norm_version(current):
+            return f"{tech} 的目标版本 {target} 与当前版本 {current} 相同，无需迁移"
+    return None
 
 
 def analyze_project(state: ReviewState) -> dict:
@@ -29,6 +48,12 @@ def analyze_project(state: ReviewState) -> dict:
             "error": "以下技术的版本尚未确认，请先在版本确认接口中指定：" + ", ".join(pending)
         }
     confirmed = {v["technology"]: v["version"] for v in versions}
+
+    # Migration 模式：额外校验目标版本（规格第 19 节：当前版本 + 目标版本）
+    if state["mode"] == "migration":
+        error = _validate_migration_targets(confirmed, state.get("target_versions", {}))
+        if error:
+            return {"error": error}
 
     # 选取源码文件：跳过依赖/配置/文档，限制数量（规格第 17 节）
     file_tree: list[str] = meta.get("file_tree", [])

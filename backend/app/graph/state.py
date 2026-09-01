@@ -18,6 +18,8 @@ class ReviewState(TypedDict):
     project_id: str
     project_path: str
     mode: str
+    # Migration 专用（Phase 11）：technology -> 目标版本；code_review 时为空 dict
+    target_versions: dict[str, str]
 
     # analyze_project 填充
     languages: dict[str, int]
