@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1] / "test_sample" / "demo-project"
 
 FILES = {
     "main.py": 'from fastapi import FastAPI\n\napp = FastAPI()\n',
-    "requirements.txt": "fastapi==0.115.0\nuvicorn>=0.30\n",
+    "requirements.txt": "fastapi==0.120.0\nuvicorn>=0.30\n",
     "app/auth.py": "def login(user, pwd):\n    return pwd == '123456'\n",
     "frontend/package.json": '{"dependencies": {"react": "^18.2.0"}}\n',
     # 锁文件中的精确版本应覆盖 package.json 的范围声明（^18.2.0）

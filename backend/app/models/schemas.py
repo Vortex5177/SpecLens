@@ -2,7 +2,8 @@
 
 Phase 2：项目上传与分析结果的响应模型。
 Phase 3：依赖版本识别与用户确认。
-后续 Phase 会在此追加 Review、Migration 相关模型。
+Phase 9：Review 结构化输出（Structured Output）。
+Phase 11 会在此追加 Migration 相关模型。
 """
 from typing import Literal
 
@@ -68,3 +69,53 @@ class ErrorResponse(BaseModel):
     """统一错误响应体（避免向前端暴露 traceback）。"""
 
     detail: str
+
+
+# ===== Phase 9：Review 结构化输出（规格第 20 节）=====
+# 审查维度仅三个（规格第 18 节）：API 合规 / 安全 / 健壮性。
+IssueCategory = Literal["api", "security", "robustness"]
+IssueSeverity = Literal["high", "medium", "low"]
+IssueConfidence = Literal["high", "medium", "low"]
+
+
+class ReviewIssue(BaseModel):
+    """单个审查问题（LLM 直接产出，fix_prompt 由后端确定性生成）。"""
+
+    file: str
+    line: int | None = None
+    category: IssueCategory
+    severity: IssueSeverity
+    confidence: IssueConfidence
+    title: str
+    description: str
+    # 依据：引用检索到的文档内容；无证据时留空并将 source 设为 llm_inference
+    evidence: str = ""
+    # 证据来源：知识文档的 source 路径，或 "llm_inference"（规格第 21 节：不得伪造官方依据）
+    source: str
+    suggestion: str
+    # Phase 10 由后端确定性生成，LLM 不产出此字段
+    fix_prompt: str = ""
+
+
+class ReviewResult(BaseModel):
+    """Review 阶段的结构化输出（Agent 的 response_format）。"""
+
+    summary: str
+    issues: list[ReviewIssue]
+
+
+class ReviewRequest(BaseModel):
+    """POST /api/reviews 请求体。"""
+
+    project_id: str
+    # V1 仅支持 code_review；migration 在 Phase 11 加入
+    mode: Literal["code_review"] = "code_review"
+
+
+class ReviewResponse(BaseModel):
+    """POST /api/reviews 响应。"""
+
+    review_id: str
+    project_id: str
+    mode: str
+    result: ReviewResult

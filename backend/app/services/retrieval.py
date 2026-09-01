@@ -4,7 +4,14 @@
   绝不跨版本返回文档（即使语义上更相似的块属于其他版本，也被硬性排除）。
 - search_security_docs：Security Retriever，安全规范不按版本过滤（固定
   technology=general、version=latest），直接语义检索。
+
+异常处理：Qdrant 内存压力下可能断连（"Allocation error: not enough memory"），
+触发 qdrant-client 默认重试 → Agent 看到错误又重试 → 死循环。
+用一次重试（1s 后）缓解瞬时故障；仍然失败则返回空结果，让 Agent 用 LLM 推理。
 """
+import time
+from functools import wraps
+
 from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client.models import FieldCondition, Filter, MatchValue
@@ -12,6 +19,26 @@ from qdrant_client.models import FieldCondition, Filter, MatchValue
 from app import config
 from app.rag.embedding import get_embeddings
 from app.services.ingestion import get_qdrant_client
+
+
+def _retry_once():
+    """一次重试（1s 后）。仍然失败则返回空结果（不抛异常）。"""
+
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            try:
+                return fn(*args, **kwargs)
+            except Exception:
+                time.sleep(1)
+                try:
+                    return fn(*args, **kwargs)
+                except Exception:
+                    return []
+
+        return wrapper
+
+    return decorator
 
 
 def _get_store(collection: str) -> QdrantVectorStore:
@@ -38,6 +65,7 @@ def _to_results(docs_with_scores: list[tuple[Document, float]]) -> list[dict]:
     ]
 
 
+@_retry_once()
 def search_official_docs(
     technology: str, version: str, query: str, limit: int = 5
 ) -> list[dict]:
@@ -61,6 +89,7 @@ def search_official_docs(
     return _to_results(results)
 
 
+@_retry_once()
 def search_security_docs(query: str, limit: int = 5) -> list[dict]:
     """Security Retriever：语义检索安全规范（规格第 15 节）。
 

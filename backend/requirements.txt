@@ -7,9 +7,11 @@ python-multipart>=0.0.9
 # PEP 508 / PEP 440 依赖声明解析（Phase 3 版本识别）
 packaging>=24.0
 
-# LangChain 生态（Phase 7+ 使用，Phase 1 仅安装备用）
+# LangChain 生态（Phase 7+：LangGraph 流程编排 + Agent + DeepSeek）
 langchain>=1.3
 langgraph>=1.2
+# DeepSeek 兼容 OpenAI 接口，经 init_chat_model 统一入口接入
+langchain-openai>=0.3
 
 # Qdrant 向量库（Phase 4 RAG；连接本地原生运行的 Qdrant 服务，非嵌入式）
 # langchain-qdrant 是 LangChain 1.x 官方推荐的集成包（旧 langchain_community.vectorstores.Qdrant 已废弃）

@@ -12,7 +12,11 @@
 - [x] Phase 4：RAG 知识库（BGE-M3 本地 Embedding + Qdrant 入库/分块/元数据）
 - [x] Phase 5：Official Retriever（technology + version 硬性过滤检索官方文档）
 - [x] Phase 6：Security Retriever（安全规范语义检索，独立 collection 不按版本过滤）
-- [ ] Phase 7+：LangGraph、Review Agent、Structured Output、Fix Prompt、Migration...（待开发）
+- [x] Phase 7：LangGraph 流程（analyze_project → review → generate_result）
+- [x] Phase 8：Review Agent（单 Agent + 4 个只读工具，动态选择审查上下文）
+- [x] Phase 9：Structured Output（Pydantic 强约束的 Issue 列表）
+- [x] Phase 10：Fix Prompt（单问题 + 项目级，模板确定性生成）
+- [ ] Phase 11+：Migration、前端整合、Docker Compose...（待开发）
 
 ## 技术栈
 
@@ -87,6 +91,8 @@ docker compose up --build
 | POST | /api/knowledge/ingest | 扫描 knowledge/official 与 knowledge/security 并入库 Qdrant（首次需加载 BGE-M3） |
 | GET | /api/knowledge/search?technology=&version=&query= | Official Retriever：版本敏感检索（technology 与 version 必填，绝不跨版本返回） |
 | GET | /api/knowledge/search/security?query= | Security Retriever：安全规范语义检索（与技术版本无关） |
+| POST | /api/reviews | 创建并同步执行 Code Review（要求项目所有技术版本已确认） |
+| GET | /api/reviews/{review_id} | 查询 Review 结果（V1 中 review_id 即 project_id，含项目级 Fix Prompt） |
 
 版本识别规则（规格第 9 节）：精确锁定（`==`、锁文件）直接采用；范围约束（`>=`、`^`、`~`）标记为待确认，**绝不猜测**，由用户指定。支持 requirements.txt、pyproject.toml、package.json、package-lock.json、poetry.lock、uv.lock；yarn.lock / pnpm-lock.yaml 会被检测到但 V1 不解析。
 
@@ -103,6 +109,24 @@ docker compose up --build
 - Security Retriever：`GET /api/knowledge/search/security`（已验证：密码存储问题命中 password 规范，注入问题命中输入验证规范）
 - Embedding：BGE-M3 本地运行（首次从 HuggingFace 下载 2.3GB，国内建议设 `HF_ENDPOINT=https://hf-mirror.com`）
 - 验证脚本：`scripts\test_bge_m3.py`（模型加载+维度）、`scripts\test_qdrant_connection.py`（向量库四步测试）
+
+## Code Review 流程（Phase 7~10）
+
+```text
+POST /api/reviews
+    ↓
+LangGraph：analyze_project → review → generate_result
+    │              │                  │
+    │              │                  └─ 确定性模板生成单问题/项目级 Fix Prompt（不调 LLM）
+    │              └─ 单 Agent（create_agent + response_format=ReviewResult）
+    │                 工具：list_files / read_file / search_official_docs / search_security_rules
+    └─ 确定性：读 meta、校验版本已全部确认、选取源码文件构建上下文
+```
+
+- 职责划分（规格原则 3）：LangGraph 管流程、Agent 管上下文选择、LLM 管判断、RAG 管检索
+- 证据规则（规格第 21 节）：依据必须来自检索结果；知识库无证据时 `source=llm_inference`，禁止伪造官方依据
+- 安全边界：Agent 工具全部只读且限制在项目目录内（防路径穿越）；官方文档检索强制使用已确认版本，传入其他版本直接拒绝
+- LLM：DeepSeek（OpenAI 兼容接口），经 `init_chat_model` 统一入口，配置在 `backend/.env` 的 `DEEPSEEK_API_KEY`
 
 ## 目录结构
 

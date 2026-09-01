@@ -54,3 +54,18 @@ KNOWLEDGE_EXTENSIONS = {".md", ".txt", ".rst"}
 # 分块参数：每块目标字符数与重叠（中文文档按字符计）
 CHUNK_SIZE = 400
 CHUNK_OVERLAP = 60
+
+# ===== LLM（Phase 7+，DeepSeek 兼容 OpenAI 接口）=====
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+
+# ===== Code Review 限制（Phase 7）=====
+# 纳入审查的源码文件数上限（按文件树顺序取前 N 个）
+REVIEW_MAX_FILES = 20
+# 单文件送入 LLM 上下文的最大字符数（超出截断）
+REVIEW_MAX_FILE_CHARS = 8000
+# 纳入审查的源码扩展名（依赖/配置/文档文件不参与代码审查）
+REVIEW_CODE_EXTENSIONS = {
+    ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs",
+}
