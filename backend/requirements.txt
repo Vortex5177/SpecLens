@@ -9,6 +9,8 @@ packaging>=24.0
 
 # LangChain 生态（Phase 7+：LangGraph 流程编排 + Agent + DeepSeek）
 langchain>=1.3
+# 代码直接 import langchain_core（tools/review/ingestion/retrieval），显式声明避免仅靠传递依赖
+langchain-core>=1.0
 langgraph>=1.2
 # DeepSeek 兼容 OpenAI 接口，经 init_chat_model 统一入口接入
 langchain-openai>=0.3

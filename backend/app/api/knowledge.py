@@ -20,6 +20,7 @@ from app.services.ingestion import (
     infer_document_type,
     ingest_document,
     ingest_knowledge,
+    invalidate_catalog_cache,
 )
 
 router = APIRouter(prefix="/api/knowledge")
@@ -52,9 +53,11 @@ def extract_version_from_filename(filename: str) -> str | None:
 def ingest() -> dict:
     """全量入库：官方文档 + 安全规范（首次加载 BGE-M3 模型可能需要数分钟）。"""
     try:
-        return ingest_knowledge()
+        result = ingest_knowledge()
     except Exception as exc:  # 入库失败不应向前端泄露堆栈
         raise HTTPException(status_code=500, detail=f"知识库入库失败：{exc}") from exc
+    invalidate_catalog_cache()  # 分块数可能变化，失效目录缓存
+    return result
 
 
 @router.post("/documents", status_code=201)
@@ -168,6 +171,7 @@ def upload_document(
         base_rel = target_dir.relative_to(config.KNOWLEDGE_DIR).as_posix()
         if not base_rel.endswith("/"):
             base_rel += "/"
+        invalidate_catalog_cache()  # 新增文档与分块数，失效目录缓存
         return {
             "saved_to": base_rel,
             "metadata": metadata,
@@ -188,6 +192,7 @@ def upload_document(
     except Exception as exc:  # 入库失败不泄露堆栈；文件已落盘，可稍后用 /ingest 重试
         raise HTTPException(status_code=500, detail=f"文档已保存但入库失败：{exc}") from exc
 
+    invalidate_catalog_cache()  # 新增文档与分块数，失效目录缓存
     return {
         "saved_to": file_path.relative_to(config.KNOWLEDGE_DIR).as_posix(),
         "metadata": metadata,
@@ -349,6 +354,7 @@ def delete_document(
             if not any(tech_dir.iterdir()):
                 tech_dir.rmdir()
 
+    invalidate_catalog_cache()  # 文档与分块已移除，失效目录缓存
     return {"deleted": source, "chunks_removed": chunks_removed}
 
 

@@ -1,4 +1,45 @@
-/* 全局样式：Phase 1 保持极简，后续 Phase 再完善 */
+/* ============================================
+   SpecLens 前端样式
+   设计基调：Professional Developer Tool
+   参考：GitHub / VS Code / Linear / Vercel
+   - 中性色体系：无渐变、无阴影、无玻璃拟态
+   - 圆角统一 6px，内容靠 border / divider / 表格组织
+   - 正文 Inter + 系统栈，代码一律等宽字体
+   ============================================ */
+
+:root {
+  /* 背景与边框 */
+  --bg: #ffffff;
+  --bg-subtle: #f6f8fa;
+  --border: #d0d7de;
+  --border-muted: #e1e5ea;
+
+  /* 文字 */
+  --fg: #1f2328;
+  --fg-muted: #59636e;
+  --fg-subtle: #818c98;
+
+  /* 强调色：近黑主按钮 + 信息蓝（链接 / focus） */
+  --accent: #1f2328;
+  --accent-hover: #3d444d;
+  --link: #0969da;
+
+  /* 语义色（低饱和浅底，GitHub label 色系） */
+  --success: #1a7f37;
+  --success-bg: #dafbe1;
+  --warning: #9a6700;
+  --warning-bg: #fff8c5;
+  --danger: #cf222e;
+  --danger-bg: #ffebe9;
+  --info-bg: #ddf4ff;
+
+  --radius: 6px;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas,
+    "Liberation Mono", Menlo, monospace;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,147 +47,130 @@
 }
 
 body {
-  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
-  background: #f5f7fa;
-  color: #333;
-}
-
-.container {
-  max-width: 720px;
-  margin: 6vh auto;
-  padding: 0 24px 48px;
-  text-align: center;
-}
-
-h1 {
-  font-size: 28px;
-  margin-bottom: 12px;
-}
-
-.subtitle {
-  color: #666;
-  line-height: 1.6;
-  margin-bottom: 32px;
-}
-
-.status {
-  display: inline-block;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 15px;
-}
-
-.status-checking {
-  background: #fff7e6;
-  color: #ad6800;
-}
-
-.status-connected {
-  background: #f6ffed;
-  color: #389e0d;
-}
-
-.status-failed {
-  background: #fff1f0;
-  color: #cf1322;
-}
-
-/* ===== 上传区域 ===== */
-.upload-card {
-  margin-top: 32px;
-  padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.upload-card h2 {
-  font-size: 18px;
-  margin-bottom: 8px;
-}
-
-.upload-card input {
-  display: block;
-  margin: 16px auto;
-}
-
-.upload-card button {
-  padding: 8px 28px;
-  border: none;
-  border-radius: 6px;
-  background: #1677ff;
-  color: #fff;
+  font-family: var(--font-sans);
   font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== 布局 ===== */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 32px 64px;
+}
+
+/* 顶部栏：左侧产品名，右侧后端状态 */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-title h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.app-desc {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+/* 后端状态：小圆点 + 文字（克制，无彩色大块） */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-checking .status-dot { background: var(--warning); }
+.status-connected .status-dot { background: var(--success); }
+.status-failed { color: var(--danger); }
+.status-failed .status-dot { background: var(--danger); }
+
+/* Tab 导航：GitHub repo nav 风格（左对齐、细下划线） */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   cursor: pointer;
 }
 
-.upload-card button:disabled {
-  background: #91caff;
-  cursor: not-allowed;
+.tab-btn:hover {
+  color: var(--fg);
 }
 
-.hint {
-  color: #888;
-  font-size: 13px;
+.tab-active {
+  color: var(--fg);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 
-.error {
-  margin-top: 12px;
-  color: #cf1322;
-  font-size: 14px;
-}
-
-/* ===== 分析结果 ===== */
-.project-info {
-  margin-top: 24px;
-  padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+/* ===== 面板（统一：border + 6px 圆角，无阴影） ===== */
+.upload-card,
+.project-info,
+.review-panel,
+.review-result,
+.knowledge-card {
+  margin-top: 16px;
+  padding: 16px 20px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   text-align: left;
 }
 
-.project-info h2 {
-  font-size: 18px;
+.upload-card h2,
+.project-info h2,
+.review-result h2,
+.knowledge-card h2 {
+  font-size: 16px;
+  font-weight: 600;
   margin-bottom: 8px;
 }
 
-.project-info h3 {
-  font-size: 15px;
-  margin: 20px 0 8px;
-}
-
-.project-info table {
-  border-collapse: collapse;
-}
-
-.project-info th,
-.project-info td {
-  padding: 4px 16px 4px 0;
-  text-align: left;
+.project-info h3,
+.version-panel h3,
+.review-panel h3,
+.knowledge-card h3 {
   font-size: 14px;
-}
-
-.project-info code {
-  background: #f0f5ff;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 13px;
-}
-
-.file-tree {
-  max-height: 320px;
-  overflow: auto;
-  padding: 12px;
-  background: #fafafa;
-  border-radius: 8px;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-/* ===== 版本确认面板 ===== */
-.version-panel {
-  margin-top: 20px;
+  font-weight: 600;
+  margin: 16px 0 8px;
 }
 
 .version-panel h3 {
@@ -155,150 +179,158 @@ h1 {
   gap: 8px;
 }
 
-.badge {
-  padding: 2px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: normal;
-}
-
-.badge-ok {
-  background: #f6ffed;
-  color: #389e0d;
-}
-
-.badge-warning {
-  background: #fff7e6;
-  color: #ad6800;
-}
-
-/* 版本变更文档（What's New）标识：Migration 检索的变更证据 */
-.badge-new {
-  margin-left: 6px;
-  background: #e6f4ff;
-  color: #0958d9;
-}
-
-.version-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 12px;
-}
-
-.version-table th,
-.version-table td {
-  padding: 8px 10px 8px 0;
-  text-align: left;
-  font-size: 14px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.version-table input {
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 13px;
-  width: 120px;
-}
-
-.version-table select {
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 13px;
-  width: 140px;
-  background: #fff;
-  cursor: pointer;
-}
-
-.version-panel button {
-  padding: 6px 24px;
-  border: none;
-  border-radius: 6px;
-  background: #1677ff;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.version-panel button:disabled {
-  background: #91caff;
-  cursor: not-allowed;
-}
-
-/* ===== 手动添加技术（候选范围 = 知识库已有文档）===== */
-.manual-add {
+.knowledge-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 12px 0 16px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
-.manual-add select {
-  padding: 6px 10px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #fff;
-  cursor: pointer;
-}
-
-.manual-add select:focus {
-  border-color: #1677ff;
-  outline: none;
-}
-
-.manual-add select:disabled {
-  background: #f5f5f5;
-  color: #bbb;
-  cursor: not-allowed;
-}
-
-.manual-add button {
-  padding: 6px 16px;
-  border: 1px solid #1677ff;
-  border-radius: 6px;
-  background: #fff;
-  color: #1677ff;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.manual-add button:hover:not(:disabled) {
-  background: #e6f4ff;
-}
-
-.manual-add button:disabled {
-  border-color: #d9d9d9;
-  color: #bbb;
-  cursor: not-allowed;
-}
-
-.manual-add .hint {
+.knowledge-header h2 {
   margin: 0;
 }
 
-/* ===== 审查模式面板 ===== */
-.review-panel {
-  margin-top: 24px;
-  padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  text-align: left;
+/* ===== 表单控件 ===== */
+input[type="text"],
+select {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
 
-.review-panel h3 {
-  font-size: 15px;
-  margin-bottom: 12px;
+input[type="text"]:focus,
+select:focus {
+  border-color: var(--link);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
+}
+
+input[type="text"]:disabled,
+select:disabled {
+  background: var(--bg-subtle);
+  color: var(--fg-subtle);
+  cursor: not-allowed;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* 原生 file input 的「选择文件」按钮改成次按钮风格 */
+input[type="file"] {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+}
+
+input[type="file"]::file-selector-button {
+  padding: 4px 12px;
+  margin-right: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--bg-subtle);
+}
+
+/* ===== 按钮 ===== */
+/* 主按钮：近黑底白字（Vercel / Linear 风） */
+.upload-card button[type="submit"],
+.version-panel button[type="submit"],
+.review-panel button,
+.knowledge-add button {
+  padding: 5px 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.upload-card button[type="submit"]:hover:not(:disabled),
+.version-panel button[type="submit"]:hover:not(:disabled),
+.review-panel button:hover:not(:disabled),
+.knowledge-add button:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.upload-card button[type="submit"]:disabled,
+.version-panel button[type="submit"]:disabled,
+.review-panel button:disabled,
+.knowledge-add button:disabled {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+  color: var(--fg-subtle);
+  cursor: not-allowed;
+}
+
+/* 次按钮：白底灰边 */
+.copy-btn,
+.manual-add button,
+.knowledge-header button {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.copy-btn:hover:not(:disabled),
+.manual-add button:hover:not(:disabled),
+.knowledge-header button:hover:not(:disabled) {
+  background: var(--bg-subtle);
+}
+
+.copy-btn:disabled,
+.manual-add button:disabled,
+.knowledge-header button:disabled {
+  color: var(--fg-subtle);
+  cursor: not-allowed;
+}
+
+/* 危险按钮：白底红字，hover 转红底 */
+.delete-btn {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--danger);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+/* ===== 上传区域 ===== */
+.upload-card input[type="file"] {
+  display: block;
+  margin: 12px 0;
 }
 
 .mode-options {
   display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
-  font-size: 14px;
+  gap: 20px;
+  margin: 8px 0 12px;
+  font-size: 13px;
 }
 
 .mode-options label {
@@ -308,190 +340,222 @@ h1 {
   cursor: pointer;
 }
 
-/* ===== Migration 目标版本表 ===== */
-.migration-targets {
-  margin-bottom: 16px;
-}
-
-.migration-targets .version-table {
-  margin-top: 8px;
-}
-
 .mode-disabled {
-  color: #bbb;
+  color: var(--fg-subtle);
   cursor: not-allowed !important;
 }
 
-.review-panel button {
-  padding: 8px 28px;
-  border: none;
-  border-radius: 6px;
-  background: #1677ff;
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
+/* ===== 文本辅助 ===== */
+.hint {
+  color: var(--fg-subtle);
+  font-size: 12.5px;
+  line-height: 1.5;
 }
 
-.review-panel button:disabled {
-  background: #91caff;
-  cursor: not-allowed;
+.error {
+  margin-top: 10px;
+  color: var(--danger);
+  font-size: 13px;
 }
 
-/* ===== 审查结果 ===== */
-.review-result {
-  margin-top: 24px;
-  padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+.ok {
+  color: var(--success);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* ===== 代码与文件树 ===== */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: rgba(175, 184, 193, 0.2);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+pre,
+.file-tree {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+}
+
+.file-tree {
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.project-info ul {
+  list-style: none;
+}
+
+.project-info li {
+  padding: 2px 0;
+}
+
+/* ===== 表格（GitHub 风：表头浅灰、行分隔线、无卡片感） ===== */
+.version-table,
+.project-info table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 8px 0 12px;
+  font-size: 13px;
+}
+
+.version-table th,
+.project-info th {
+  padding: 6px 12px;
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
   text-align: left;
 }
 
-.review-result h2 {
-  font-size: 18px;
-  margin-bottom: 8px;
+.version-table td,
+.project-info td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-muted);
+  text-align: left;
+  vertical-align: top;
 }
 
+.version-table tbody tr:last-child td,
+.project-info tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.version-table tbody tr:hover,
+.project-info tbody tr:hover {
+  background: var(--bg-subtle);
+}
+
+.version-table input {
+  width: 120px;
+}
+
+.version-table select {
+  width: 140px;
+  cursor: pointer;
+}
+
+/* ===== Badge（方角浅底 label，IDE / Linear 风） ===== */
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.badge-ok { background: var(--success-bg); color: var(--success); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+.badge-high { background: var(--danger-bg); color: var(--danger); }
+.badge-medium { background: var(--warning-bg); color: var(--warning); }
+.badge-low { background: var(--info-bg); color: var(--link); }
+
+.badge-category {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
+  color: var(--fg-muted);
+}
+
+/* 版本变更文档（What's New）标识：Migration 检索的变更证据 */
+.badge-new {
+  margin-left: 6px;
+  background: var(--info-bg);
+  color: var(--link);
+}
+
+/* ===== 手动添加技术（候选范围 = 知识库已有文档）===== */
+.manual-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.manual-add select {
+  cursor: pointer;
+}
+
+.manual-add .hint {
+  margin: 0;
+}
+
+/* ===== Migration 目标版本表 ===== */
+.migration-targets {
+  margin-bottom: 12px;
+}
+
+/* ===== 审查结果 ===== */
 .review-result .summary {
-  color: #555;
+  color: var(--fg-muted);
+  font-size: 13.5px;
   line-height: 1.6;
   margin-bottom: 12px;
 }
 
 .severity-stats {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.badge-high {
-  background: #fff1f0;
-  color: #cf1322;
-}
-
-.badge-medium {
-  background: #fff7e6;
-  color: #ad6800;
-}
-
-.badge-low {
-  background: #f0f5ff;
-  color: #1677ff;
-}
-
-.badge-category {
-  background: #f6ffed;
-  color: #389e0d;
-}
-
-.issue {
-  border: 1px solid #f0f0f0;
-  border-left-width: 4px;
-  border-radius: 8px;
-  padding: 16px;
+  gap: 6px;
   margin-bottom: 16px;
 }
 
-.issue-high {
-  border-left-color: #cf1322;
+/* Issue：border + 3px 左侧 severity 指示，无阴影 */
+.issue {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 12px;
 }
 
-.issue-medium {
-  border-left-color: #fa8c16;
-}
-
-.issue-low {
-  border-left-color: #1677ff;
-}
+.issue-high { border-left-color: var(--danger); }
+.issue-medium { border-left-color: var(--warning); }
+.issue-low { border-left-color: var(--link); }
 
 .issue-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .issue-location {
-  font-size: 13px;
-  color: #666;
   margin-left: auto;
-}
-
-.issue-location code {
-  background: #f0f5ff;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 12.5px;
+  color: var(--fg-muted);
 }
 
 .issue h4 {
-  font-size: 15px;
-  margin-bottom: 6px;
-}
-
-.issue-desc {
   font-size: 14px;
-  color: #444;
-  line-height: 1.6;
-  margin-bottom: 8px;
-}
-
-/* Migration：当前行为 vs 目标行为对比块 */
-.behavior-pair {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.behavior {
-  flex: 1;
-  border-radius: 6px;
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.behavior strong {
-  display: block;
-  font-size: 12px;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
-.behavior-current {
-  background: #fff7e6;
-}
-
-.behavior-current strong {
-  color: #ad6800;
-}
-
-.behavior-target {
-  background: #f0f5ff;
-}
-
-.behavior-target strong {
-  color: #1677ff;
-}
-
-.issue-evidence summary {
-  font-size: 13px;
-  color: #1677ff;
-  cursor: pointer;
-  margin-bottom: 6px;
-}
-
-.issue-evidence pre {
-  max-height: 240px;
-  overflow: auto;
-  padding: 10px;
-  background: #fafafa;
-  border-radius: 6px;
-  font-size: 12px;
-  white-space: pre-wrap;
+.issue-desc {
+  font-size: 13.5px;
+  color: var(--fg-muted);
+  line-height: 1.6;
+  margin-bottom: 8px;
 }
 
 .issue-suggestion {
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.6;
   margin: 8px 0;
 }
@@ -499,90 +563,73 @@ h1 {
 .issue-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-top: 8px;
 }
 
-.copy-btn {
-  padding: 5px 16px;
-  border: 1px solid #1677ff;
-  border-radius: 6px;
-  background: #fff;
-  color: #1677ff;
+.issue-evidence summary {
   font-size: 13px;
+  color: var(--link);
   cursor: pointer;
+  margin-bottom: 6px;
 }
 
-.copy-btn:hover:not(:disabled) {
-  background: #f0f5ff;
+.issue-evidence pre {
+  max-height: 240px;
+  overflow: auto;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
-.copy-btn:disabled {
-  border-color: #d9d9d9;
-  color: #bbb;
-  cursor: not-allowed;
+/* Migration：当前行为 vs 目标行为对比块 */
+.behavior-pair {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
+.behavior {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--bg-subtle);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.behavior strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.behavior-current strong { color: var(--warning); }
+.behavior-target strong { color: var(--link); }
+
+/* 项目级 Fix Prompt 条 */
 .project-fix {
-  margin-top: 8px;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
-/* ===== 本地知识库文档清单 ===== */
-.knowledge-card {
-  margin-top: 24px;
-  padding: 24px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  text-align: left;
-}
-
-.knowledge-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.knowledge-header h2 {
-  margin: 0;
-}
-
-.knowledge-header button {
-  padding: 4px 16px;
-  border: 1px solid #1677ff;
-  border-radius: 6px;
-  background: #fff;
-  color: #1677ff;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.knowledge-header button:hover:not(:disabled) {
-  background: #e6f4ff;
-}
-
-.knowledge-card h3 {
-  font-size: 14px;
-  margin: 16px 0 8px;
-}
-
-.knowledge-card .version-table {
-  margin-top: 0;
-}
-
-/* 添加文档表单 */
+/* ===== 知识库：添加文档表单 ===== */
 .knowledge-add {
   margin: 12px 0 4px;
-  padding: 14px 16px;
-  background: #fafafa;
-  border-radius: 8px;
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .knowledge-add-fields {
@@ -593,19 +640,7 @@ h1 {
   flex-wrap: wrap;
 }
 
-.knowledge-add input[type="text"] {
-  padding: 6px 10px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
 .knowledge-add select {
-  padding: 6px 10px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 13px;
-  background: #fff;
   cursor: pointer;
 }
 
@@ -615,77 +650,7 @@ h1 {
   align-items: center;
   gap: 6px;
   margin: 6px 0 0;
-  font-size: 12px;
-  color: #595959;
+  font-size: 12.5px;
+  color: var(--fg-muted);
   cursor: pointer;
-}
-
-.knowledge-auto-check input[type="checkbox"] {
-  cursor: pointer;
-}
-
-.knowledge-add button {
-  padding: 6px 18px;
-  border: none;
-  border-radius: 6px;
-  background: #1677ff;
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.knowledge-add button:disabled {
-  background: #91caff;
-  cursor: not-allowed;
-}
-
-.ok {
-  color: #389e0d;
-  font-size: 13px;
-  margin-top: 6px;
-}
-
-.delete-btn {
-  padding: 2px 12px;
-  border: 1px solid #ff4d4f;
-  border-radius: 6px;
-  background: #fff;
-  color: #ff4d4f;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.delete-btn:hover {
-  background: #fff1f0;
-}
-
-/* Tab 导航：分析 / 文档库 */
-.tab-bar {
-  display: flex;
-  gap: 0;
-  margin: 28px 0 20px;
-  border-bottom: 2px solid #e8e8e8;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 12px 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: #888;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-}
-
-.tab-btn:hover {
-  color: #555;
-}
-
-.tab-active {
-  color: #1677ff;
-  border-bottom-color: #1677ff;
 }

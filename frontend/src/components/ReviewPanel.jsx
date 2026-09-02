@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * 审查模式选择与触发面板（规格第 24 节：Review Mode）。
+ * 分析模式选择与触发面板（规格第 24 节：Review Mode）。
  * - code_review：直接开始审查
  * - migration：为每个已确认技术填写目标版本（至少填一个），
  *   后端对比当前版本与目标版本的规范（规格第 19 节）
@@ -112,7 +112,7 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
 
   return (
     <section className="review-panel">
-      <h3>审查模式</h3>
+      <h3>分析模式</h3>
       <div className="mode-options">
         <label>
           <input

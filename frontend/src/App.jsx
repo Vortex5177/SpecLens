@@ -54,16 +54,18 @@ function App() {
 
   return (
     <div className="container">
-      <h1>Version-Aware AI Code Reviewer</h1>
-      <p className="subtitle">
-        基于指定技术版本的官方文档与安全规范，对项目进行 AI Code Review 并生成 Fix Prompt
-      </p>
-
-      <div className={`status status-${status}`}>
-        {status === "checking" && "正在检测后端连接..."}
-        {status === "connected" && "后端已连接"}
-        {status === "failed" && "后端未连接，请确认后端服务已启动（端口 8000）"}
-      </div>
+      <header className="app-header">
+        <div className="app-title">
+          <h1>SpecLens</h1>
+          <p className="app-desc">版本敏感的代码审查与迁移分析</p>
+        </div>
+        <div className={`status status-${status}`}>
+          <span className="status-dot" />
+          {status === "checking" && "正在检测后端连接..."}
+          {status === "connected" && "后端已连接"}
+          {status === "failed" && "后端未连接，请确认后端服务已启动（端口 8000）"}
+        </div>
+      </header>
 
       {status === "connected" && (
         <>

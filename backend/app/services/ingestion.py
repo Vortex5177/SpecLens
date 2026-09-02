@@ -12,6 +12,7 @@ Migration 检索的主要信息来源，SpecLens §2/§12）。
 
 流程：扫描目录 -> 按扩展名过滤 -> 分块 -> Embedding -> 写入 Qdrant。
 """
+import threading
 import uuid
 from pathlib import Path
 
@@ -234,11 +235,40 @@ def delete_document_vectors(source: str, source_type: str) -> int:
         return 0
 
 
+# catalog 结果缓存：知识库内容仅在文档增删/全量入库时变化，
+# 而构建一次需要全量 scroll Qdrant 统计各文档分块数（大知识库下耗时数十秒）。
+# 由写操作接口（上传/删除/全量入库）调用 invalidate_catalog_cache() 主动失效。
+_catalog_cache: dict | None = None
+_catalog_cache_lock = threading.Lock()
+
+
+def invalidate_catalog_cache() -> None:
+    """清除 catalog 缓存：知识库写操作后调用，下次请求重算。"""
+    global _catalog_cache
+    with _catalog_cache_lock:
+        _catalog_cache = None
+
+
 def catalog_knowledge() -> dict:
     """返回本地已有规范文档清单（官方文档按 技术/版本 分组 + 安全规范平铺）。
 
     每个文档附带已入库分块数：0 或 null 表示尚未入库/无法统计。
+    结果缓存在内存中，写操作后由 invalidate_catalog_cache() 失效。
     """
+    global _catalog_cache
+    with _catalog_cache_lock:
+        if _catalog_cache is not None:
+            return _catalog_cache
+
+    catalog = _build_catalog()
+
+    with _catalog_cache_lock:
+        _catalog_cache = catalog
+    return catalog
+
+
+def _build_catalog() -> dict:
+    """实际构建 catalog：扫描目录 + 全量统计 Qdrant 分块数（无缓存）。"""
     counts = _chunk_counts_by_source()
 
     def _doc_entry(file_path: Path) -> dict:
