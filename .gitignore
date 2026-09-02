@@ -33,5 +33,5 @@ tools/qdrant/.qdrant-initialized
 .DS_Store
 .aicoding-chat-workspace
 
-# ===== 调试产物 =====
-page-screenshot.png
+# ===== 调试产物（浏览器验证截图）=====
+*.png
