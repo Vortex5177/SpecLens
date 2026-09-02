@@ -4,6 +4,9 @@
 
 > 本项目只发现问题、给出依据与建议，不自动修改用户代码。
 
+### 项目演示：
+https://www.bilibili.com/video/BV1W6tU67EW8/?spm_id_from=333.1387.homepage.video_card.click
+
 ## 核心特性
 
 - **版本敏感检索**：官方文档按 `technology + version` 硬性过滤，绝不跨版本返回结果；知识库中没有证据时明确标注 `llm_inference`，不伪造官方依据
