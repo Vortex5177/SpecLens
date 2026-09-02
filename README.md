@@ -50,7 +50,7 @@ analyze_project ──→ review ──→ generate_result
 │       ├── graph/        # LangGraph：state、tools、nodes（analyze / review / result）
 │       ├── models/       # Pydantic 请求/响应/结构化输出模型
 │       └── services/     # 上传解压、依赖解析、RAG 检索
-├── frontend/             # React + Vite 前端（单页：上传 → 版本确认 → 审查/迁移）
+├── frontend/             # React + Vite 前端（「分析」板块：上传 → 版本确认 → 审查/迁移；「文档库」板块：知识文档查看 / 上传 / 删除）
 ├── knowledge/            # 知识库源文件
 │   ├── sources/                             # 官方文档 Source 配置（YAML，定义采集 URL）
 │   ├── official/{technology}/{version}/   # 官方文档（目录结构即元数据）
@@ -89,7 +89,12 @@ copy .env.example .env             # 然后填入 DEEPSEEK_API_KEY
 
 ### 2. 知识库入库
 
-三种方式：
+仓库已内置一份开箱即用的知识库（前端「文档库」板块或 `GET /api/knowledge/catalog` 可查看）：
+
+- **官方文档**（19 份）：Python 3.9~3.13、FastAPI 0.141、LangChain 0.2/0.3/1.0、Pydantic 2.0、Django 5.0/5.2/6.0、NumPy 2.5、pandas 2.3/3.0、SQLAlchemy 2.0
+- **安全规范**（6 份）：OWASP Top 10:2025、OWASP ASVS 4.0、CWE Top 25，及认证 / 输入校验 / 密码存储专题
+
+如需其他技术或版本，三种方式补充：
 
 - **官方文档采集（推荐）**：在 `knowledge/sources/` 放置 YAML 配置（定义技术、版本、What's New URL），运行 `python scripts/ingest_official.py` 自动下载 → HTML 清理 → 入库。只采集版本变化部分（What's New / Changelog），稳定基础知识交给 LLM。重复执行幂等（确定性块 ID）
 - **手动放文件 + 全量入库**：向 `knowledge/` 放入文档后调用 `POST /api/knowledge/ingest`
@@ -132,11 +137,11 @@ npm run dev
 
 ## 使用流程
 
-1. **上传**：两种方式任选——项目 zip（≤50MB），或切换到「直接上传文件」选择多个源码/配置文件（.py、.js、requirements.txt 等，最多 200 个）。页面展示语言 / 依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例
+1. **上传**：两种方式任选——项目 zip（≤50MB），或切换到「直接上传文件」选择多个源码/配置文件（.py、.js、requirements.txt 等，最多 200 个）。页面展示语言 / 依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例；`scripts/test_legacy_code.py` 是一份包含 Python 3.9 / pandas 2.3 / LangChain 0.2 / Django 5.0 旧版写法的样例，适合演示 Migration
 2. **版本确认**：精确锁定的版本自动采用；范围约束标记为「待确认」，需手动填写并确认。所有技术确认前审查按钮保持禁用
 3. **选择模式并开始**：
    - Code Review：直接点「开始审查」
-   - Migration：填写至少一个目标版本后点「开始迁移分析」
+   - Migration：从下拉框为待迁移技术选择目标版本（选项来自知识库已入库版本），至少一个后点「开始迁移分析」
 4. **查看结果**：严重级别统计 + 问题卡片（文件 / 行号 / 描述 / 可折叠证据 / 建议）；每个问题有 **Copy Fix Prompt**，页面级有 **Copy Project Fix Prompt**
 
 审查为同步接口，视项目规模约 30~120 秒。
@@ -173,6 +178,6 @@ npm run dev
 
 ## 已知限制
 
-- 仓库内置的 `knowledge/` 仅为样例文档（fastapi 0.110/0.120 + 3 份通用安全规范），实际使用请自行填充目标技术与版本的官方文档
+- 内置知识库仅覆盖「知识库入库」一节列出的 8 个技术，其他技术或版本需按该节方式自行采集填充
 - BGE-M3 为 CPU 本地推理，满足开发规模；后端重启后首个检索请求会因重新加载模型而变慢
 - 审查 / 迁移为同步接口，未实现异步任务队列
