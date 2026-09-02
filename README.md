@@ -52,10 +52,11 @@ analyze_project ──→ review ──→ generate_result
 │       └── services/     # 上传解压、依赖解析、RAG 检索
 ├── frontend/             # React + Vite 前端（单页：上传 → 版本确认 → 审查/迁移）
 ├── knowledge/            # 知识库源文件
+│   ├── sources/                             # 官方文档 Source 配置（YAML，定义采集 URL）
 │   ├── official/{technology}/{version}/   # 官方文档（目录结构即元数据）
 │   └── security/                          # 通用安全规范
 ├── tools/qdrant/         # Qdrant 本地运行：可执行文件 + 启停脚本 + 数据目录
-├── scripts/              # 辅助脚本（生成测试样例、连通性测试等）
+├── scripts/              # 辅助脚本（官方文档采集、测试样例生成、连通性测试等）
 └── uploads/              # 上传项目与审查结果（运行时产物，不入版本库）
 ```
 
@@ -88,10 +89,29 @@ copy .env.example .env             # 然后填入 DEEPSEEK_API_KEY
 
 ### 2. 知识库入库
 
-两种方式：
+三种方式：
 
+- **官方文档采集（推荐）**：在 `knowledge/sources/` 放置 YAML 配置（定义技术、版本、What's New URL），运行 `python scripts/ingest_official.py` 自动下载 → HTML 清理 → 入库。只采集版本变化部分（What's New / Changelog），稳定基础知识交给 LLM。重复执行幂等（确定性块 ID）
 - **手动放文件 + 全量入库**：向 `knowledge/` 放入文档后调用 `POST /api/knowledge/ingest`
-- **接口上传**：`POST /api/knowledge/documents`（multipart），指定 `source_type`（official/security），official 还需指定 `technology` 与 `version`，可选 `document_type`（reference / whats_new，缺省按文件名推断）；文档保存后立即增量入库，无需再调 ingest
+- **接口上传**：`POST /api/knowledge/documents`（multipart），指定 `source_type`（official/security），official 还需指定 `technology` 与 `version`，可选 `document_type`（reference / whats_new，缺省按文件名推断）。zip 模式下可开启 `auto_detect_version=true`，按每个文件名识别真实版本号（如 `whatsnew_3.11.txt → 3.11`），识别失败则回退到表单 `version`；适用于 Python 这种「基础文档 + 各版本 What's New 打包在一起」的官方发布结构。文档保存后立即增量入库，无需再调 ingest
+
+Source 配置示例（`knowledge/sources/python.yaml`）：
+
+```yaml
+technology: python
+documents:
+  - version: "3.13"
+    document_type: whats_new
+    url: "https://docs.python.org/3/whatsnew/3.13.html"
+```
+
+采集命令：
+
+```powershell
+python scripts/ingest_official.py                        # 处理所有 Source
+python scripts/ingest_official.py --tech python           # 只处理 Python
+python scripts/ingest_official.py --tech python --version 3.13  # 只处理指定版本
+```
 
 目录结构即元数据：`knowledge/official/fastapi/0.120/xxx.md` 的每个分块会携带 `technology=fastapi, version=0.120`。重复入库幂等（确定性块 ID）。首次调用需加载 BGE-M3 模型（约 2.3GB，首次从 HuggingFace 下载）。
 
@@ -132,7 +152,7 @@ npm run dev
 | GET | `/api/projects/{project_id}` | 查询项目分析结果 |
 | POST | `/api/projects/{project_id}/versions` | 确认 / 覆盖技术版本 |
 | POST | `/api/knowledge/ingest` | 扫描 knowledge/ 并全量入库 Qdrant |
-| POST | `/api/knowledge/documents` | 上传知识文档（.md/.txt/.rst 或 .zip 压缩包，指定 technology/version 与文档类型）并即时入库 |
+| POST | `/api/knowledge/documents` | 上传知识文档（.md/.txt/.rst 或 .zip 压缩包，指定 technology/version 与文档类型；zip 可开启 auto_detect_version 按文件名自动识别版本）并即时入库，返回 versions_detected |
 | DELETE | `/api/knowledge/documents` | 删除知识文档（同时移除本地文件与 Qdrant 分块） |
 | GET | `/api/knowledge/catalog` | 查看本地已有规范文档清单（按技术/版本分组，附入库分块数与文档类型） |
 | GET | `/api/knowledge/search` | 版本敏感的官方文档检索（technology + version 必填） |

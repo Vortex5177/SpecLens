@@ -23,5 +23,9 @@ langchain-text-splitters>=1.0
 langchain-huggingface>=1.0
 sentence-transformers>=3.0
 
+# 官方文档采集（scripts/ingest_official.py：HTML 下载 + 清理 + YAML 配置解析）
+beautifulsoup4>=4.12
+pyyaml>=6.0
+
 # 环境变量管理
 python-dotenv>=1.0

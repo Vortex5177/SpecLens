@@ -63,6 +63,8 @@ def _to_results(docs_with_scores: list[tuple[Document, float]]) -> list[dict]:
             "version": doc.metadata.get("version", ""),
             "document_type": doc.metadata.get("document_type", ""),
             "topic": doc.metadata.get("topic", ""),
+            # 官方文档采集时记录的原始 URL（用户上传文档无此字段，返回空串）
+            "source_url": doc.metadata.get("source_url", ""),
         }
         for doc, score in docs_with_scores
     ]

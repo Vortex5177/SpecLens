@@ -16,6 +16,8 @@ function KnowledgeCatalog() {
   const [version, setVersion] = useState("");
   // 官方文档类型：auto（按文件名推断）/ reference（规范参考）/ whats_new（版本变更，Migration 检索用）
   const [docType, setDocType] = useState("auto");
+  // zip 模式下按文件名自动识别每个文件的真实版本（适用于 python 官方文档这种「基础 + 各版本 What's New 打包」）
+  const [autoDetectVersion, setAutoDetectVersion] = useState(true);
   const [docFile, setDocFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -50,8 +52,18 @@ function KnowledgeCatalog() {
       setUploadError("请选择要添加的文档（.md/.txt/.rst）或压缩包（.zip）");
       return;
     }
-    if (sourceType === "official" && (!technology.trim() || !version.trim())) {
-      setUploadError("官方文档必须填写技术名与版本");
+    if (sourceType === "official" && !technology.trim()) {
+      setUploadError("官方文档必须填写技术名");
+      return;
+    }
+    // 版本校验：单文件必须填；zip + 开启自动识别时可留空（识别不到的文件会报错）
+    const isZip = docFile && /\.zip$/i.test(docFile.name);
+    if (
+      sourceType === "official" &&
+      !version.trim() &&
+      !(isZip && autoDetectVersion)
+    ) {
+      setUploadError("官方文档必须填写版本；zip 可勾选“按文件名自动识别版本”");
       return;
     }
     const formData = new FormData();
@@ -61,6 +73,9 @@ function KnowledgeCatalog() {
       formData.append("technology", technology.trim());
       formData.append("version", version.trim());
       formData.append("document_type", docType);
+      if (isZip) {
+        formData.append("auto_detect_version", autoDetectVersion ? "true" : "false");
+      }
     }
     setUploading(true);
     try {
@@ -73,10 +88,15 @@ function KnowledgeCatalog() {
         throw new Error(data.detail || `添加失败（HTTP ${res.status}）`);
       }
       if (data.files_ingested) {
-        // .zip 压缩包：返回文件级明细与总计块数
-        setUploadOk(
-          `已保存并入库 ${data.files_ingested.length} 个文档（共 ${data.total_chunks} 块）到 ${data.saved_to}`
-        );
+        // .zip 压缩包：返回文件级明细与总计块数；若按文件名自动识别了版本，
+        // 同时显示实际分布的版本列表（便于用户确认识别是否合理）
+        let msg = `已保存并入库 ${data.files_ingested.length} 个文档（共 ${data.total_chunks} 块）`;
+        if (data.versions_detected && data.versions_detected.length > 0) {
+          msg += `，分布于 ${data.versions_detected.length} 个版本：${data.versions_detected.join("、")}`;
+        } else {
+          msg += ` 到 ${data.saved_to}`;
+        }
+        setUploadOk(msg);
       } else {
         setUploadOk(`已保存并入库：${data.saved_to}（${data.chunks_ingested} 块）`);
       }
@@ -169,32 +189,52 @@ function KnowledgeCatalog() {
           </label>
         </div>
         {sourceType === "official" && (
-          <div className="knowledge-add-fields">
-            <input
-              type="text"
-              placeholder="技术名，如 fastapi"
-              value={technology}
-              onChange={(e) => setTechnology(e.target.value)}
-              disabled={uploading}
-            />
-            <input
-              type="text"
-              placeholder="版本，如 0.120"
-              value={version}
-              onChange={(e) => setVersion(e.target.value)}
-              disabled={uploading}
-            />
-            <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              disabled={uploading}
-              title="文档类型：版本变更文档（What's New）是 Migration 检索的主要证据"
-            >
-              <option value="auto">类型：自动识别</option>
-              <option value="reference">类型：规范参考</option>
-              <option value="whats_new">类型：版本变更（What's New）</option>
-            </select>
-          </div>
+          <>
+            <div className="knowledge-add-fields">
+              <input
+                type="text"
+                placeholder="技术名，如 python"
+                value={technology}
+                onChange={(e) => setTechnology(e.target.value)}
+                disabled={uploading}
+              />
+              <input
+                type="text"
+                placeholder={
+                  docFile && /\.zip$/i.test(docFile.name) && autoDetectVersion
+                    ? "版本可留空（由文件名识别）"
+                    : "版本，如 3.14"
+                }
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                disabled={
+                  uploading ||
+                  (docFile && /\.zip$/i.test(docFile.name) && autoDetectVersion)
+                }
+              />
+              <select
+                value={docType}
+                onChange={(e) => setDocType(e.target.value)}
+                disabled={uploading}
+                title="文档类型：版本变更文档（What's New）是 Migration 检索的主要证据"
+              >
+                <option value="auto">类型：自动识别</option>
+                <option value="reference">类型：规范参考</option>
+                <option value="whats_new">类型：版本变更（What's New）</option>
+              </select>
+            </div>
+            {docFile && /\.zip$/i.test(docFile.name) && (
+              <label className="knowledge-auto-check">
+                <input
+                  type="checkbox"
+                  checked={autoDetectVersion}
+                  onChange={(e) => setAutoDetectVersion(e.target.checked)}
+                  disabled={uploading}
+                />
+                按文件名自动识别每个文件的真实版本（适用于官方文档整站打包，如 python-3.14-docs.zip）
+              </label>
+            )}
+          </>
         )}
         <div className="knowledge-add-fields">
           <input

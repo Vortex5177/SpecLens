@@ -1,0 +1,25 @@
+# Python 官方文档 Source 配置
+# 只配 What's New（版本变更文档），稳定基础知识交给 LLM。
+# 用法：python scripts/ingest_official.py --tech python
+technology: python
+
+documents:
+  - version: "3.9"
+    document_type: whats_new
+    url: "https://docs.python.org/3/whatsnew/3.9.html"
+
+  - version: "3.10"
+    document_type: whats_new
+    url: "https://docs.python.org/3/whatsnew/3.10.html"
+
+  - version: "3.11"
+    document_type: whats_new
+    url: "https://docs.python.org/3/whatsnew/3.11.html"
+
+  - version: "3.12"
+    document_type: whats_new
+    url: "https://docs.python.org/3/whatsnew/3.12.html"
+
+  - version: "3.13"
+    document_type: whats_new
+    url: "https://docs.python.org/3/whatsnew/3.13.html"

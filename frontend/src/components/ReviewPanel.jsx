@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * 审查模式选择与触发面板（规格第 24 节：Review Mode）。
@@ -16,6 +16,17 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
+  // versions 变化时同步 targets（用户手动添加新技术后，targets 需要补上新条目）
+  useEffect(() => {
+    setTargets((prev) => {
+      const next = {};
+      for (const v of versions) {
+        next[v.technology] = prev[v.technology] ?? "";
+      }
+      return next;
+    });
+  }, [versions]);
+
   function handleTarget(technology, value) {
     setTargets((prev) => ({ ...prev, [technology]: value }));
   }
@@ -23,10 +34,10 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
   // migration 必须至少填写一个目标版本
   function selectedTargets() {
     return versions
-      .filter((v) => targets[v.technology].trim() !== "")
+      .filter((v) => (targets[v.technology] || "").trim() !== "")
       .map((v) => ({
         technology: v.technology,
-        version: targets[v.technology].trim(),
+        version: (targets[v.technology] || "").trim(),
       }));
   }
 
@@ -153,7 +164,11 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
         </div>
       )}
 
-      <button type="button" onClick={handleStart} disabled={running || !reviewEnabled}>
+      <button
+        type="button"
+        onClick={handleStart}
+        disabled={running || !reviewEnabled || (mode === "migration" && versions.length === 0)}
+      >
         {running ? runningLabel : startLabel}
       </button>
       {mode === "code_review" && versions.length === 0 && (

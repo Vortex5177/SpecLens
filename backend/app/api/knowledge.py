@@ -26,9 +26,26 @@ router = APIRouter(prefix="/api/knowledge")
 
 # technology / version 会直接成为目录名：只允许安全字符，防路径穿越与非法目录（规格第 26 节）
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+-]*$")
+# 从文件名提取版本号：X.Y 或 X.Y.Z 格式（每段 1-3 位数字，覆盖 fastapi 0.120 等 3 位小版本）。
+# 取最后一个匹配（文件末尾的版本号通常是该文档所描述的版本，
+# 如 whatsnew_3.11.txt → 3.11、whatsnew_0.120 → 0.120、python-3.14-docs → 3.14）
+# 注意：不用 \b，因为 Python 的 \w 包含 _，而文件名常见 _3.11 写法，\b 在此不成立；
+# 改用 (?:^|\D) 匹配「开头或非数字字符」作为左锚点，右锚点用 (?=\D|$) 确保版本号后面不是数字
+_VERSION_IN_FILENAME = re.compile(r"(?:^|\D)(\d{1,3}\.\d{1,3}(?:\.\d{1,3})?)(?=\D|$)")
 _MAX_DOC_SIZE = 10 * 1024 * 1024  # 单份知识文档最大 10MB（与项目单文件上限一致）
 _MAX_ZIP_SIZE = 100 * 1024 * 1024  # 整个压缩包最大 100MB（官方文档整站导出常见）
 _MAX_ZIP_FILES = 2000  # 压缩包内最多入库的知识文档数（官方文档整站导出可能上千个）
+
+
+def extract_version_from_filename(filename: str) -> str | None:
+    """按文件名推断版本号（用于 zip 上传的 auto_detect_version 模式）。
+
+    匹配 X.Y 或 X.Y.Z 格式，取最后一次匹配（文档末尾的版本号通常是
+    该文件所描述的版本）。不匹配则返回 None，由调用方决定回退。
+    典型命中：whatsnew_3.11 → 3.11；python-3.14-docs → 3.14；v2.0 → 2.0
+    """
+    matches = _VERSION_IN_FILENAME.findall(filename)
+    return matches[-1] if matches else None
 
 
 @router.post("/ingest")
@@ -45,10 +62,14 @@ def upload_document(
     file: UploadFile = File(..., description="知识文档（.md/.txt/.rst）或文档压缩包（.zip）"),
     source_type: str = Form(..., description="official 或 security"),
     technology: str = Form("", description="技术名（official 必填，如 fastapi）"),
-    version: str = Form("", description="版本（official 必填，如 0.120）"),
+    version: str = Form("", description="版本：单文件必填；zip 且开启 auto_detect_version 时可留空（回退值）"),
     document_type: str = Form(
         "auto",
         description="official 文档类型：reference（规范参考）/ whats_new（版本变更）/ auto（按文件名推断）",
+    ),
+    auto_detect_version: str = Form(
+        "false",
+        description="仅 zip 生效：true 时按每个文件名识别版本号，失败则回退到表单 version",
     ),
 ) -> dict:
     """用户上传知识文档并即时入库（规格第 11 节）。
@@ -57,7 +78,9 @@ def upload_document(
     security：保存到 knowledge/security/，固定 technology=general、version=latest。
     document_type 区分 reference 与 whats_new（Migration 检索的变更证据，
     SpecLens §2），auto 时按文件名推断。
-    支持 .zip：解压后白名单文档逐个拍平入库（官方文档整站导出常见形式）。
+    zip 模式下可开启 auto_detect_version，让包内每个文件按文件名识别真实版本
+    （如 whatsnew_3.11.txt → version=3.11，reference 文件无版本号 → 用表单 version）；
+    适用于 Python 这种「基础文档 + 各版本 What's New 打包在一起」的官方发布结构。
     同名文件覆盖，确定性块 ID 保证重复上传幂等。
     """
     if source_type not in ("official", "security"):
@@ -66,15 +89,29 @@ def upload_document(
         raise HTTPException(
             status_code=400, detail="document_type 只能是 auto / reference / whats_new"
         )
+    # 文件名只取最后一段，扩展名白名单，防止路径穿越与非文本文件（规格第 26 节）
+    filename = Path(file.filename or "").name
+    is_zip = Path(filename).suffix.lower() == ".zip"
+    # zip + auto_detect_version=true：允许 version 为空（识别不到的文件会报错而非静默入库）
+    auto_version_enabled = is_zip and auto_detect_version.lower() == "true"
     if source_type == "official":
-        if not technology or not version:
-            raise HTTPException(status_code=400, detail="official 文档必须提供 technology 与 version")
-        for name, value in (("technology", technology), ("version", version)):
-            if not _SAFE_NAME.match(value):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"{name} 只允许字母、数字与 . _ + -，且不能以符号开头",
-                )
+        if not technology:
+            raise HTTPException(status_code=400, detail="official 文档必须提供 technology")
+        if not version and not auto_version_enabled:
+            raise HTTPException(
+                status_code=400,
+                detail="official 单文件上传必须提供 version；zip 可开启 auto_detect_version 由文件名自动识别",
+            )
+        if not _SAFE_NAME.match(technology):
+            raise HTTPException(
+                status_code=400,
+                detail="technology 只允许字母、数字与 . _ + -，且不能以符号开头",
+            )
+        if version and not _SAFE_NAME.match(version):
+            raise HTTPException(
+                status_code=400,
+                detail="version 只允许字母、数字与 . _ + -，且不能以符号开头",
+            )
 
     # 文件名只取最后一段，扩展名白名单，防止路径穿越与非文本文件（规格第 26 节）
     filename = Path(file.filename or "").name
@@ -92,7 +129,9 @@ def upload_document(
         raise HTTPException(status_code=400, detail="文档内容为空")
 
     if source_type == "official":
-        target_dir = config.KNOWLEDGE_DIR / "official" / technology / version
+        # official 的基准目录：{technology}/{version}，若 version 为空（仅 zip+auto 允许）
+        # 则退到 technology 级别，实际文件会落在自动识别出的版本子目录下
+        target_dir = config.KNOWLEDGE_DIR / "official" / technology / version if version else config.KNOWLEDGE_DIR / "official" / technology
         # document_type 先存用户选择（可能为 auto）：单文件在下面解析，
         # zip 由 _extract_and_ingest_zip 逐文件解析（压缩包内可能混合两种类型）
         metadata = {
@@ -117,16 +156,24 @@ def upload_document(
     # .zip 压缩包：解压 + 逐个入库，返回文件级明细与总计；返回结构与单文档不同，由前端区分渲染
     if is_zip:
         try:
-            result = _extract_and_ingest_zip(content, target_dir, metadata)
+            result = _extract_and_ingest_zip(
+                content, target_dir, metadata, auto_version_enabled=auto_version_enabled
+            )
         except HTTPException:
             raise
         except Exception as exc:  # 入库失败不泄露堆栈；解压目录已清理，可重新上传
             raise HTTPException(status_code=500, detail=f"压缩包入库失败：{exc}") from exc
+        # 计算文件实际分布的版本数（auto_detect 可能把文件分到不同版本目录）
+        versions_hit = sorted({item.get("version") for item in result["files_ingested"] if item.get("version")})
+        base_rel = target_dir.relative_to(config.KNOWLEDGE_DIR).as_posix()
+        if not base_rel.endswith("/"):
+            base_rel += "/"
         return {
-            "saved_to": target_dir.relative_to(config.KNOWLEDGE_DIR).as_posix() + "/",
+            "saved_to": base_rel,
             "metadata": metadata,
             "files_ingested": result["files_ingested"],
             "total_chunks": result["total_chunks"],
+            "versions_detected": versions_hit,
         }
 
     file_path = target_dir / filename
@@ -148,13 +195,24 @@ def upload_document(
     }
 
 
-def _extract_and_ingest_zip(content: bytes, target_dir: Path, metadata: dict) -> dict:
+def _extract_and_ingest_zip(
+    content: bytes,
+    target_dir: Path,
+    metadata: dict,
+    auto_version_enabled: bool = False,
+) -> dict:
     """解压知识文档压缩包到 target_dir 并逐个入库。
 
     安全约束（规格第 26 节）：拒绝路径穿越条目、限制总大小与文件数、只收白名单扩展名。
     合并语义：同名文件覆盖（确定性块 ID 保证幂等），目录内其他已有文档不动；
     入库失败时仅清理本次新写入的文件。子目录结构拍平为父目录前缀，
     避免目录嵌套影响清单展示与同名冲突。
+
+    auto_version_enabled=True 时，对每个文件按文件名识别真实版本：
+    - 识别成功 → 文件落到 {technology}/{version_real}/，metadata.version 同步更新
+    - 识别失败 → 回退到 metadata["version"]（若也为空则报错）
+    用于 Python 这种「基础文档 + 各版本 What's New 打包在一起」的官方发布结构，
+    确保每份文档落到自己的版本目录，后续区间检索自然命中。
     """
     import io
 
@@ -190,15 +248,37 @@ def _extract_and_ingest_zip(content: bytes, target_dir: Path, metadata: dict) ->
         target_dir.mkdir(parents=True, exist_ok=True)
         ingested = []
         written: list[Path] = []
+        # 缓存已创建的版本目录，避免重复 mkdir
+        version_dirs: dict[str, Path] = {}
+        fallback_version = metadata.get("version", "")
         try:
             for m, flat_name in valid:
                 data = zf.read(m)
                 if not data.strip():
                     continue  # 跳过空文档，不影响其余文件入库
-                file_path = target_dir / flat_name
+                doc_meta = dict(metadata, topic=Path(flat_name).stem)
+                # 按文件名识别真实版本（仅当 auto_version_enabled 时）
+                per_file_version = None
+                if auto_version_enabled:
+                    per_file_version = extract_version_from_filename(Path(flat_name).stem)
+                    if not per_file_version:
+                        if not fallback_version:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"文件 {flat_name} 无法从文件名识别版本号，且未提供回退版本",
+                            )
+                        per_file_version = fallback_version
+                    doc_meta["version"] = per_file_version
+                    if per_file_version not in version_dirs:
+                        # 版本目录位于 technology 下，与单文件上传的布局保持一致
+                        vdir = config.KNOWLEDGE_DIR / "official" / metadata["technology"] / per_file_version
+                        vdir.mkdir(parents=True, exist_ok=True)
+                        version_dirs[per_file_version] = vdir
+                    file_path = version_dirs[per_file_version] / flat_name
+                else:
+                    file_path = target_dir / flat_name
                 file_path.write_bytes(data)
                 written.append(file_path)
-                doc_meta = dict(metadata, topic=Path(flat_name).stem)
                 # 压缩包内可能混合 reference 与 whats_new：auto 时逐文件推断，
                 # 显式指定时整包统一（用户已明确声明类型）
                 if doc_meta.get("document_type") == "auto":
@@ -207,6 +287,7 @@ def _extract_and_ingest_zip(content: bytes, target_dir: Path, metadata: dict) ->
                 ingested.append({
                     "file": file_path.relative_to(config.KNOWLEDGE_DIR).as_posix(),
                     "chunks": chunks,
+                    "version": doc_meta.get("version", ""),
                 })
         except Exception:
             # 仅清理本次新写入的文件，不波及目录内已有文档（孤儿向量会随同名覆盖自愈）
