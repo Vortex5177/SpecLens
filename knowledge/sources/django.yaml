@@ -1,0 +1,19 @@
+# Django 官方文档 Source 配置
+# 6.0 是当前稳定版（2025-12 发布），5.2 是 LTS，5.0 是上一主线。
+technology: django
+
+documents:
+  - version: "6.0"
+    document_type: whats_new
+    url: "https://docs.djangoproject.com/en/6.1/releases/6.0/"
+    filename: whatsnew_6.0.txt
+
+  - version: "5.2"
+    document_type: whats_new
+    url: "https://docs.djangoproject.com/en/6.1/releases/5.2/"
+    filename: whatsnew_5.2.txt
+
+  - version: "5.0"
+    document_type: whats_new
+    url: "https://docs.djangoproject.com/en/5.0/releases/5.0/"
+    filename: whatsnew_5.0.txt

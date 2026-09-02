@@ -1,0 +1,14 @@
+# pandas 官方文档 Source 配置
+# 3.0 是当前主线（大量 API 移除），2.3 是 2.x 末版。
+technology: pandas
+
+documents:
+  - version: "3.0"
+    document_type: whats_new
+    url: "https://pandas.pydata.org/docs/dev/whatsnew/v3.0.0.html"
+    filename: whatsnew_3.0.txt
+
+  - version: "2.3"
+    document_type: whats_new
+    url: "https://pandas.pydata.org/docs/dev/whatsnew/v2.3.0.html"
+    filename: whatsnew_2.3.txt

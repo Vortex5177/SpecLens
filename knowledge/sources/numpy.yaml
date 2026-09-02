@@ -1,0 +1,10 @@
+# NumPy 官方文档 Source 配置
+# Release Notes 是单页全版本合集，保存在最新版本目录下。
+# NumPy 2.x 是当前主线（2.0 有重大 API 变更），迁移场景多。
+technology: numpy
+
+documents:
+  - version: "2.5"
+    document_type: whats_new
+    url: "https://numpy.org/doc/stable/release.html"
+    filename: whatsnew_release_notes.txt

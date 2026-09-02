@@ -13,6 +13,8 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
   const [targets, setTargets] = useState(() =>
     Object.fromEntries(versions.map((v) => [v.technology, ""]))
   );
+  // 知识库中各技术可用版本（用于下拉选项）
+  const [availableVersions, setAvailableVersions] = useState({});
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +28,20 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
       return next;
     });
   }, [versions]);
+
+  // 加载知识库目录，获取各技术可用版本
+  useEffect(() => {
+    fetch("/api/knowledge/catalog")
+      .then((res) => res.json())
+      .then((data) => {
+        const map = {};
+        for (const t of data.official || []) {
+          map[t.technology] = t.versions.map((v) => v.version);
+        }
+        setAvailableVersions(map);
+      })
+      .catch(() => {});
+  }, []);
 
   function handleTarget(technology, value) {
     setTargets((prev) => ({ ...prev, [technology]: value }));
@@ -149,13 +165,18 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
                     <code>{v.version}</code>
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      placeholder="如 0.120"
+                    <select
                       value={targets[v.technology]}
                       onChange={(e) => handleTarget(v.technology, e.target.value)}
                       disabled={running}
-                    />
+                    >
+                      <option value="">-- 选择目标版本 --</option>
+                      {(availableVersions[v.technology] || []).map((ver) => (
+                        <option key={ver} value={ver}>
+                          {ver}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                 </tr>
               ))}

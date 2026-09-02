@@ -1,0 +1,865 @@
+Getting Help
+Language:
+en
+zh-hans
+sv
+pt-br
+pl
+ko
+ja
+it
+id
+fr
+es
+el
+Documentation version:
+6.1
+dev
+6.0
+5.2
+Django 5.2 release notes
+¶
+April 2, 2025
+Welcome to Django 5.2!
+These release notes cover the
+new features
+, as well as
+some
+backwards incompatible changes
+you
+should be aware of when upgrading from Django 5.1 or earlier. We’ve
+begun the deprecation process for some features
+.
+See the
+How to upgrade Django to a newer version
+guide if you’re updating an existing
+project.
+Django 5.2 is designated as a
+long-term support release
+. It will receive security updates for at least
+three years after its release. Support for the previous LTS, Django 4.2, will
+end in April 2026.
+Python compatibility
+¶
+Django 5.2 supports Python 3.10, 3.11, 3.12, 3.13, and 3.14 (as of 5.2.8). We
+highly recommend
+and only officially support the latest release of each
+series.
+What’s new in Django 5.2
+¶
+Automatic models import in the
+shell
+¶
+The
+shell
+management command now automatically imports models from
+all installed apps. You can view further details of the imported objects by
+setting the
+--verbosity
+flag to 2 or more:
+/
+
+$
+python
+-Wall
+manage.py
+shell
+--verbosity
+=
+2
+6 objects imported automatically, including:
+from django.contrib.admin.models import LogEntry
+from django.contrib.auth.models import Group, Permission, User
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sessions.models import Session
+...\>
+py -Wall manage.py shell --verbosity=2
+6 objects imported automatically, including:
+from django.contrib.admin.models import LogEntry
+from django.contrib.auth.models import Group, Permission, User
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sessions.models import Session
+This
+behavior can be customized
+to add
+or remove automatic imports.
+Composite Primary Keys
+¶
+The new
+django.db.models.CompositePrimaryKey
+allows tables to be
+created with a primary key consisting of multiple fields.
+To use a composite primary key, when defining a model set the
+pk
+attribute
+to be a
+CompositePrimaryKey
+:
+from
+django.db
+import
+models
+class
+Release
+(
+models
+.
+Model
+):
+pk
+=
+models
+.
+CompositePrimaryKey
+(
+"version"
+,
+"name"
+)
+version
+=
+models
+.
+IntegerField
+()
+name
+=
+models
+.
+CharField
+(
+max_length
+=
+20
+)
+See
+Composite primary keys
+for more details.
+Simplified override of
+BoundField
+¶
+Prior to version 5.2, overriding
+Field.get_bound_field()
+was the only
+option to use a custom
+BoundField
+. Django now supports
+specifying the following attributes to customize form rendering:
+BaseRenderer.bound_field_class
+at the project level,
+Form.bound_field_class
+at the form level, and
+Field.bound_field_class
+at the field level.
+For example, to customize the
+BoundField
+of a
+Form
+class:
+from
+django
+import
+forms
+class
+CustomBoundField
+(
+forms
+.
+BoundField
+):
+custom_class
+=
+"custom"
+def
+css_classes
+(
+self
+,
+extra_classes
+=
+None
+):
+result
+=
+super
+()
+.
+css_classes
+(
+extra_classes
+)
+if
+self
+.
+custom_class
+not
+in
+result
+:
+result
++=
+f
+"
+{
+self
+.
+custom_class
+}
+"
+return
+result
+.
+strip
+()
+class
+CustomForm
+(
+forms
+.
+Form
+):
+bound_field_class
+=
+CustomBoundField
+name
+=
+forms
+.
+CharField
+(
+label
+=
+"Your Name"
+,
+max_length
+=
+100
+,
+required
+=
+False
+,
+widget
+=
+forms
+.
+TextInput
+(
+attrs
+=
+{
+"class"
+:
+"name-input-class"
+}),
+)
+email
+=
+forms
+.
+EmailField
+(
+label
+=
+"Your Email"
+)
+When rendering a
+CustomForm
+instance, the following HTML is included:
+<
+div
+class
+=
+"custom"
+>
+<
+label
+for
+=
+"id_name"
+>
+Your Name:
+</
+label
+>
+<
+input
+type
+=
+"text"
+name
+=
+"name"
+class
+=
+"name-input-class"
+maxlength
+=
+"100"
+id
+=
+"id_name"
+>
+</
+div
+>
+<
+div
+class
+=
+"custom"
+>
+<
+label
+for
+=
+"id_email"
+>
+Your Email:
+</
+label
+>
+<
+input
+type
+=
+"email"
+name
+=
+"email"
+maxlength
+=
+"320"
+required
+=
+""
+id
+=
+"id_email"
+>
+</
+div
+>
+See
+Customizing BoundField
+for more details about this feature.
+Minor features
+¶
+django.contrib.admin
+¶
+The
+admin/base.html
+template now has a new block
+extrabody
+for adding custom code before the closing
+</body>
+tag.
+The value of a
+URLField
+now renders as a link.
+django.contrib.admindocs
+¶
+Links to components in docstrings now supports custom link text, using the
+format
+:role:`link
+text
+<link>`
+. See
+documentation helpers
+for more details.
+The
+model pages
+are now restricted to
+users with the corresponding view or change permissions.
+django.contrib.auth
+¶
+The default iteration count for the PBKDF2 password hasher is increased from
+870,000 to 1,000,000.
+The following new asynchronous methods are now provided, using an
+a
+prefix:
+UserManager.acreate_user()
+UserManager.acreate_superuser()
+BaseUserManager.aget_by_natural_key()
+User.aget_user_permissions()
+User.aget_all_permissions()
+User.aget_group_permissions()
+User.ahas_perm()
+User.ahas_perms()
+User.ahas_module_perms()
+ModelBackend.aauthenticate()
+ModelBackend.aget_user_permissions()
+ModelBackend.aget_group_permissions()
+ModelBackend.aget_all_permissions()
+ModelBackend.ahas_perm()
+ModelBackend.ahas_module_perms()
+RemoteUserBackend.aauthenticate()
+RemoteUserBackend.aconfigure_user()
+Auth backends can now provide async implementations which are used when
+calling async auth functions (e.g.
+aauthenticate()
+) to reduce context-switching
+which improves performance. See
+adding an async interface
+for more details.
+The
+password validator classes
+now have a new method
+get_error_message()
+, which can be overridden in
+subclasses to customize the error messages.
+django.contrib.gis
+¶
+GDAL now supports curved geometries
+CurvePolygon
+,
+CompoundCurve
+,
+CircularString
+,
+MultiSurface
+, and
+MultiCurve
+via the new
+OGRGeometry.has_curve
+property, and the
+OGRGeometry.get_linear_geometry()
+and
+OGRGeometry.get_curve_geometry()
+methods.
+coveredby
+and
+covers
+lookup are now supported on MySQL.
+django.contrib.syndication
+¶
+All
+SyndicationFeed
+classes now support
+a
+stylesheets
+attribute. If specified, an
+<?
+xml-stylesheet
+?>
+processing instruction will be added to the top of the document for each
+stylesheet in the given list. See
+Feed stylesheets
+for more details.
+Database backends
+¶
+MySQL connections now default to using the
+utf8mb4
+character set,
+instead of
+utf8
+, which is an alias for the deprecated character set
+utf8mb3
+.
+Oracle backends now support
+connection pools
+, by setting
+"pool"
+in the
+OPTIONS
+part of your database configuration.
+Decorators
+¶
+method_decorator()
+now supports wrapping
+asynchronous view methods.
+Email
+¶
+Tuple items of
+EmailMessage.attachments
+and
+EmailMultiAlternatives.attachments
+are now named tuples, as opposed
+to regular tuples.
+EmailMultiAlternatives.alternatives
+is now a list of
+named tuples, as opposed to regular tuples.
+The new
+body_contains()
+method
+returns a boolean indicating whether a provided text is contained in the
+email
+body
+and in all attached MIME type
+text/*
+alternatives.
+Error Reporting
+¶
+The attribute
+SafeExceptionReporterFilter.hidden_settings
+now
+treats values as sensitive if their name includes
+AUTH
+.
+Forms
+¶
+The new
+ColorInput
+form widget is for entering a color
+in
+rrggbb
+hexadecimal format and renders as
+<input
+type="color"
+...>
+.
+Some browsers support a visual color picker interface for this input type.
+The new
+SearchInput
+form widget is for entering search
+queries and renders as
+<input
+type="search"
+...>
+.
+The new
+TelInput
+form widget is for entering telephone
+numbers and renders as
+<input
+type="tel"
+...>
+.
+The new
+field_id
+argument for
+ErrorList
+allows an
+HTML
+id
+attribute to be added in the error template. See
+ErrorList.field_id
+for details.
+An
+aria_describedby
+property is added to
+BoundField
+to ease use of this HTML attribute in templates.
+To improve accessibility for screen reader users
+aria-describedby
+is used
+to associate form fields with their error messages. See
+how form errors are displayed
+for details.
+The new asset object
+Script
+is available for adding
+custom HTML-attributes to JavaScript in form media. See
+paths as objects
+for more details.
+Management Commands
+¶
+A new warning is displayed when running
+runserver
+, indicating that
+it is unsuitable for production. This warning can be suppressed by setting
+the
+DJANGO_RUNSERVER_HIDE_WARNING
+environment variable to
+"true"
+.
+The
+makemigrations
+and
+migrate
+commands  have a new
+Command.autodetector
+attribute for subclasses to override in order to use
+a custom autodetector class.
+The new
+BaseCommand.get_check_kwargs()
+method can be overridden in
+custom commands to control the running of system checks, e.g. to opt into
+database-dependent checks.
+Migrations
+¶
+The new operation
+AlterConstraint
+is a no-op operation that alters
+constraints without dropping and recreating constraints in the database.
+Models
+¶
+The
+SELECT
+clause generated when using
+QuerySet.values()
+and
+QuerySet.values_list()
+now matches the specified order of the
+referenced expressions. Previously, the order was based on a set of
+counterintuitive rules which made query combination through methods such as
+QuerySet.union()
+unpredictable.
+Added support for validation of model constraints which use a
+GeneratedField
+.
+The new
+Expression.set_returning
+attribute specifies that the
+expression contains a set-returning function, enforcing subquery evaluation.
+This is necessary for many Postgres set-returning functions.
+CharField.max_length
+is no
+longer required to be set on SQLite, which supports unlimited
+VARCHAR
+columns.
+QuerySet.explain()
+now supports the
+memory
+and
+serialize
+options on PostgreSQL 17+.
+The new
+JSONArray
+database function
+accepts a list of field names or expressions and returns a JSON array
+containing those values.
+The new
+Expression.allows_composite_expressions
+attribute specifies
+that the expression allows composite expressions, for example, to support
+composite primary keys
+.
+Requests and Responses
+¶
+The new
+HttpResponse.text
+property provides the string
+representation of
+HttpResponse.content
+.
+The new
+HttpRequest.get_preferred_type()
+method can be used to query
+the preferred media type the client accepts.
+The new
+preserve_request
+argument for
+HttpResponseRedirect
+and
+HttpResponsePermanentRedirect
+determines whether the HTTP status codes 302/307 or 301/308 are used,
+respectively.
+The new
+preserve_request
+argument for
+redirect()
+allows to instruct the user agent to reuse
+the HTTP method and body during redirection using specific status codes.
+Serialization
+¶
+Each serialization format now defines a
+Deserializer
+class, rather than a
+function, to improve extensibility when defining a
+custom serialization format
+.
+Templates
+¶
+The new
+simple_block_tag()
+decorator enables
+the creation of simple block tags, which can accept and use a section of the
+template.
+Tests
+¶
+Stack frames from Django’s custom assertions are now hidden. This makes test
+failures easier to read and enables
+test
+--pdb
+to directly enter
+into the failing test method.
+Data loaded from
+fixtures
+and from
+migrations enabled with
+serialized_rollback=True
+are now available during
+TransactionTestCase.setUpClass()
+.
+URLs
+¶
+reverse()
+and
+reverse_lazy()
+now accept
+query
+and
+fragment
+keyword arguments, allowing the addition of a
+query string and/or fragment identifier in the generated URL, respectively.
+Utilities
+¶
+SafeString
+now returns
+NotImplemented
+in
+__add__
+for non-string right-hand side
+values. This aligns with the
+str
+addition behavior and allows
+__radd__
+to be used if available.
+format_html_join()
+now supports taking an iterable
+of mappings, passing their contents as keyword arguments to
+format_html()
+.
+Backwards incompatible changes in 5.2
+¶
+Database backend API
+¶
+This section describes changes that may be needed in third-party database
+backends.
+The new
+Model._is_pk_set()
+method
+allows checking if a Model instance’s primary key is defined.
+BaseDatabaseOperations.adapt_decimalfield_value()
+is now a no-op, simply
+returning the given value.
+django.contrib.gis
+¶
+Support for PostGIS 3.0 is removed.
+Support for GDAL 3.0 is removed.
+Dropped support for PostgreSQL 13
+¶
+Upstream support for PostgreSQL 13 ends in November 2025. Django 5.2 supports
+PostgreSQL 14 and higher.
+Changed MySQL connection character set default
+¶
+MySQL connections now default to using the
+utf8mb4
+character set, instead
+of
+utf8
+, which is an alias for the deprecated character set
+utf8mb3
+.
+utf8mb3
+can be specified in the
+OPTIONS
+part of the
+DATABASES
+setting, if needed for legacy databases.
+Miscellaneous
+¶
+Adding
+EmailMultiAlternatives.alternatives
+is now only supported via
+the
+attach_alternative()
+method.
+The minimum supported version of
+gettext
+is increased from 0.15 to 0.19.
+HttpRequest.accepted_types
+is now sorted by the client’s preference,
+based on the request’s
+Accept
+header.
+The attributes
+UniqueConstraint.violation_error_code
+and
+UniqueConstraint.violation_error_message
+are now always used when
+provided. Previously, they were ignored if
+UniqueConstraint.fields
+was set without a
+UniqueConstraint.condition
+.
+The
+debug()
+context processor is no
+longer included in the default project template.
+The following methods now have
+alters_data=True
+set to prevent side
+effects when
+rendering a template context
+:
+UserManager.create_user()
+UserManager.acreate_user()
+UserManager.create_superuser()
+UserManager.acreate_superuser()
+QuerySet.create()
+QuerySet.acreate()
+QuerySet.bulk_create()
+QuerySet.abulk_create()
+QuerySet.get_or_create()
+QuerySet.aget_or_create()
+QuerySet.update_or_create()
+QuerySet.aupdate_or_create()
+The minimum supported version of
+oracledb
+is increased from 1.3.2 to
+2.3.0.
+Built-in aggregate functions accepting only one argument (
+Avg
+,
+Count
+,
+Max
+,
+Min
+,
+StdDev
+,
+Sum
+, and
+Variance
+) now raise
+TypeError
+when called with an incorrect number of arguments.
+Features deprecated in 5.2
+¶
+Miscellaneous
+¶
+The
+all
+argument for the
+django.contrib.staticfiles.finders.find()
+function is deprecated in favor of the
+find_all
+argument.
+Fallbacks to
+request.user
+and
+request.auser()
+when
+user
+is
+None
+in
+django.contrib.auth.login()
+and
+django.contrib.auth.alogin()
+, respectively, are deprecated.
+The
+ordering
+keyword argument of the PostgreSQL specific aggregation
+functions
+django.contrib.postgres.aggregates.ArrayAgg
+,
+django.contrib.postgres.aggregates.JSONBAgg
+, and
+django.contrib.postgres.aggregates.StringAgg
+is deprecated in favor
+of the
+order_by
+argument.
+Support for subclasses of
+RemoteUserMiddleware
+that override
+process_request()
+without overriding
+aprocess_request()
+is
+deprecated.
+Back to Top

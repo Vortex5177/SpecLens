@@ -1,0 +1,588 @@
+Release notes
+#
+2.5.0
+Highlights
+Deprecations
+Expired deprecations
+Compatibility notes
+C API changes
+New Features
+Improvements
+Performance improvements and changes
+Typing improvements and changes
+Changes
+2.4.6
+Contributors
+Pull requests merged
+2.4.5
+Contributors
+Pull requests merged
+2.4.4
+Contributors
+Pull requests merged
+2.4.3
+Contributors
+Pull requests merged
+2.4.2
+Contributors
+Pull requests merged
+2.4.1
+Contributors
+Pull requests merged
+2.4.0
+Highlights
+Deprecations
+Expired deprecations
+Compatibility notes
+C API changes
+New Features
+Improvements
+Performance improvements and changes
+Changes
+2.3.5
+Contributors
+Pull requests merged
+2.3.4
+Changes
+Contributors
+Pull requests merged
+2.3.3
+Contributors
+Pull requests merged
+2.3.2
+Contributors
+Pull requests merged
+2.3.1
+Contributors
+Pull requests merged
+2.3.0
+Highlights
+New functions
+Deprecations
+Expired deprecations
+C API changes
+New Features
+Improvements
+Performance improvements and changes
+Changes
+2.2.6
+Contributors
+Pull requests merged
+2.2.5
+Contributors
+Pull requests merged
+2.2.4
+Contributors
+Pull requests merged
+2.2.3
+Contributors
+Pull requests merged
+2.2.2
+Contributors
+Pull requests merged
+2.2.1
+Contributors
+Pull requests merged
+2.2.0
+Deprecations
+Expired deprecations
+Compatibility notes
+New Features
+Improvements
+Performance improvements and changes
+Changes
+2.1.3
+Improvements
+Changes
+Contributors
+Pull requests merged
+2.1.2
+Contributors
+Pull requests merged
+2.1.1
+Contributors
+Pull requests merged
+2.1.0
+New functions
+Deprecations
+Expired deprecations
+C API changes
+New Features
+Improvements
+Performance improvements and changes
+Changes
+2.0.2
+Contributors
+Pull requests merged
+2.0.1
+Improvements
+Contributors
+Pull requests merged
+2.0.0
+Highlights
+NumPy 2.0 Python API removals
+Deprecations
+Expired deprecations
+Compatibility notes
+C API changes
+NumPy 2.0 C API removals
+New Features
+Improvements
+Changes
+1.26.4
+Contributors
+Pull requests merged
+1.26.3
+Compatibility
+Improvements
+Contributors
+Pull requests merged
+1.26.2
+Contributors
+Pull requests merged
+1.26.1
+Build system changes
+New features
+Contributors
+Pull requests merged
+1.26.0
+New Features
+Improvements
+Build system changes
+Contributors
+Pull requests merged
+1.25.2
+Contributors
+Pull requests merged
+1.25.1
+Contributors
+Pull requests merged
+1.25.0
+Deprecations
+Expired deprecations
+Compatibility notes
+New Features
+Improvements
+Performance improvements and changes
+Changes
+1.24.4
+Contributors
+Pull requests merged
+1.24.3
+Contributors
+Pull requests merged
+1.24.2
+Contributors
+Pull requests merged
+1.24.1
+Contributors
+Pull requests merged
+1.24.0
+Deprecations
+Expired deprecations
+Compatibility notes
+New Features
+Improvements
+Performance improvements and changes
+Changes
+1.23.5
+Contributors
+Pull requests merged
+1.23.4
+Contributors
+Pull requests merged
+1.23.3
+Contributors
+Pull requests merged
+1.23.2
+Contributors
+Pull requests merged
+1.23.1
+Contributors
+Pull requests merged
+1.23.0
+New functions
+Deprecations
+Expired deprecations
+New Features
+Compatibility notes
+Improvements
+Performance improvements and changes
+1.22.4
+Contributors
+Pull requests merged
+1.22.3
+Contributors
+Pull requests merged
+1.22.2
+Contributors
+Pull requests merged
+1.22.1
+Contributors
+Pull requests merged
+1.22.0
+Expired deprecations
+Deprecations
+Compatibility notes
+C API changes
+New Features
+Improvements
+1.21.6
+1.21.5
+Contributors
+Pull requests merged
+1.21.4
+Contributors
+Pull requests merged
+1.21.3
+Contributors
+Pull requests merged
+1.21.2
+Contributors
+Pull requests merged
+1.21.1
+Contributors
+Pull requests merged
+1.21.0
+New functions
+Expired deprecations
+Deprecations
+Expired deprecations
+Compatibility notes
+C API changes
+New Features
+Improvements
+Performance improvements
+Changes
+1.20.3
+Contributors
+Pull requests merged
+1.20.2
+Contributors
+Pull requests merged
+1.20.1
+Highlights
+Contributors
+Pull requests merged
+1.20.0
+New functions
+Deprecations
+Future Changes
+Expired deprecations
+Compatibility notes
+C API changes
+New Features
+Improvements
+Performance improvements and changes
+Changes
+1.19.5
+Contributors
+Pull requests merged
+1.19.4
+Contributors
+Pull requests merged
+1.19.3
+Contributors
+Pull requests merged
+1.19.2
+Improvements
+Contributors
+Pull requests merged
+1.19.1
+Contributors
+Pull requests merged
+1.19.0
+Highlights
+Expired deprecations
+Compatibility notes
+Deprecations
+C API changes
+New Features
+Improvements
+Improve detection of CPU features
+Changes
+1.18.5
+Contributors
+Pull requests merged
+1.18.4
+Contributors
+Pull requests merged
+1.18.3
+Highlights
+Contributors
+Pull requests merged
+1.18.2
+Contributors
+Pull requests merged
+1.18.1
+Contributors
+Pull requests merged
+1.18.0
+Highlights
+New functions
+Deprecations
+Expired deprecations
+Compatibility notes
+C API changes
+New Features
+Improvements
+Changes
+1.17.5
+Contributors
+Pull requests merged
+1.17.4
+Highlights
+Contributors
+Pull requests merged
+1.17.3
+Highlights
+Compatibility notes
+Contributors
+Pull requests merged
+1.17.2
+Contributors
+Pull requests merged
+1.17.1
+Contributors
+Pull requests merged
+1.17.0
+Highlights
+New functions
+Deprecations
+Future Changes
+Compatibility notes
+C API changes
+New Features
+Improvements
+Changes
+1.16.6
+Highlights
+New functions
+Compatibility notes
+Improvements
+Contributors
+Pull requests merged
+1.16.5
+Contributors
+Pull requests merged
+1.16.4
+New deprecations
+Compatibility notes
+Changes
+Contributors
+Pull requests merged
+1.16.3
+Compatibility notes
+Improvements
+Changes
+1.16.2
+Compatibility notes
+Contributors
+Pull requests merged
+1.16.1
+Contributors
+Enhancements
+Compatibility notes
+New Features
+Improvements
+Changes
+1.16.0
+Highlights
+New functions
+New deprecations
+Expired deprecations
+Future changes
+Compatibility notes
+C API changes
+New Features
+Improvements
+Changes
+1.15.4
+Compatibility Note
+Contributors
+Pull requests merged
+1.15.3
+Compatibility Note
+Contributors
+Pull requests merged
+1.15.2
+Compatibility Note
+Contributors
+Pull requests merged
+1.15.1
+Compatibility Note
+Contributors
+Pull requests merged
+1.15.0
+Highlights
+New functions
+Deprecations
+Future Changes
+Compatibility notes
+C API changes
+New Features
+Improvements
+1.14.6
+Contributors
+Pull requests merged
+1.14.5
+Contributors
+Pull requests merged
+1.14.4
+Contributors
+Pull requests merged
+1.14.3
+Contributors
+Pull requests merged
+1.14.2
+Contributors
+Pull requests merged
+1.14.1
+Contributors
+Pull requests merged
+1.14.0
+Highlights
+New functions
+Deprecations
+Future Changes
+Compatibility notes
+C API changes
+New Features
+Improvements
+Changes
+1.13.3
+Contributors
+Pull requests merged
+1.13.2
+Contributors
+Pull requests merged
+1.13.1
+Pull requests merged
+Contributors
+1.13.0
+Highlights
+New functions
+Deprecations
+Future Changes
+Build System Changes
+Compatibility notes
+C API changes
+New Features
+Improvements
+Changes
+1.12.1
+Bugs Fixed
+1.12.0
+Highlights
+Dropped Support
+Added Support
+Build System Changes
+Deprecations
+Future Changes
+Compatibility notes
+New Features
+Improvements
+Changes
+1.11.3
+Contributors to maintenance/1.11.3
+Pull Requests Merged
+1.11.2
+Pull Requests Merged
+1.11.1
+Fixes Merged
+1.11.0
+Highlights
+Build System Changes
+Future Changes
+Compatibility notes
+New Features
+Improvements
+Changes
+Deprecations
+FutureWarnings
+1.10.4
+Compatibility notes
+Issues Fixed
+Merged PRs
+1.10.3
+1.10.2
+Compatibility notes
+Issues Fixed
+Merged PRs
+Notes
+1.10.1
+1.10.0
+Highlights
+Dropped Support
+Future Changes
+Compatibility notes
+New Features
+Improvements
+Changes
+Deprecations
+1.9.2
+Issues fixed
+1.9.1
+Issues fixed
+1.9.0
+Highlights
+Dropped Support
+Future Changes
+Compatibility notes
+New Features
+Improvements
+Deprecations
+1.8.2
+Issues fixed
+1.8.1
+Issues fixed
+Changes
+Deprecations
+1.8.0
+Highlights
+Dropped Support
+Future Changes
+Compatibility notes
+New Features
+Improvements
+Changes
+Deprecations
+Authors
+1.7.2
+Issues fixed
+1.7.1
+Issues fixed
+1.7.0
+Highlights
+Compatibility notes
+New features
+Changes
+Deprecations
+1.6.2
+Issues fixed
+Changes
+1.6.1
+Issues Fixed
+1.6.0
+Highlights
+New features
+Changes
+Deprecated features
+Removed features
+1.5.0
+Highlights
+New features
+Changes
+1.4.0
+Highlights
+New features
+Improvements
+Deprecations
+Internal changes
+1.3.0
+Highlights
+New features
+Deprecated features
+Documentation changes
+New C API
+Internal changes

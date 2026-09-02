@@ -201,6 +201,16 @@ h1 {
   width: 120px;
 }
 
+.version-table select {
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 140px;
+  background: #fff;
+  cursor: pointer;
+}
+
 .version-panel button {
   padding: 6px 24px;
   border: none;
@@ -647,4 +657,35 @@ h1 {
 
 .delete-btn:hover {
   background: #fff1f0;
+}
+
+/* Tab 导航：分析 / 文档库 */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  margin: 28px 0 20px;
+  border-bottom: 2px solid #e8e8e8;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #888;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-btn:hover {
+  color: #555;
+}
+
+.tab-active {
+  color: #1677ff;
+  border-bottom-color: #1677ff;
 }

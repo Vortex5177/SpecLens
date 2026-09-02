@@ -6,11 +6,13 @@ import ReviewResult from "./components/ReviewResult.jsx";
 import UploadSection from "./components/UploadSection.jsx";
 
 /**
- * 首页：后端连通状态 + 项目上传 + 版本确认 + 审查触发与结果展示。
+ * 首页：文档库（知识库管理）+ 分析（项目上传 → 审查 → 结果）两大板块。
  */
 function App() {
   // 后端连接状态：checking / connected / failed
   const [status, setStatus] = useState("checking");
+  // 当前板块：docs（文档库）/ analysis（分析）
+  const [activeTab, setActiveTab] = useState("analysis");
   // 上传成功后的分析结果（UploadResponse）
   const [uploadResult, setUploadResult] = useState(null);
   // 审查/迁移完成后的结果：{ mode, data }（data 含 result 与 project_fix_prompt）
@@ -65,24 +67,44 @@ function App() {
 
       {status === "connected" && (
         <>
-          <UploadSection onUploaded={handleUploaded} />
-          <KnowledgeCatalog />
-          {uploadResult && (
-            <ProjectInfo
-              analysis={uploadResult.analysis}
-              onVersionsConfirmed={handleVersionsConfirmed}
-            />
+          <div className="tab-bar">
+            <button
+              className={`tab-btn ${activeTab === "analysis" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("analysis")}
+            >
+              分析
+            </button>
+            <button
+              className={`tab-btn ${activeTab === "docs" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("docs")}
+            >
+              文档库
+            </button>
+          </div>
+
+          {activeTab === "analysis" && (
+            <>
+              <UploadSection onUploaded={handleUploaded} />
+              {uploadResult && (
+                <ProjectInfo
+                  analysis={uploadResult.analysis}
+                  onVersionsConfirmed={handleVersionsConfirmed}
+                />
+              )}
+              {uploadResult && (
+                <ReviewPanel
+                  key={uploadResult.project_id}
+                  projectId={uploadResult.project_id}
+                  versions={versions}
+                  reviewEnabled={reviewEnabled}
+                  onCompleted={setReview}
+                />
+              )}
+              {review && <ReviewResult mode={review.mode} data={review.data} />}
+            </>
           )}
-          {uploadResult && (
-            <ReviewPanel
-              key={uploadResult.project_id}
-              projectId={uploadResult.project_id}
-              versions={versions}
-              reviewEnabled={reviewEnabled}
-              onCompleted={setReview}
-            />
-          )}
-          {review && <ReviewResult mode={review.mode} data={review.data} />}
+
+          {activeTab === "docs" && <KnowledgeCatalog />}
         </>
       )}
     </div>

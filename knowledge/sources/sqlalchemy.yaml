@@ -1,0 +1,14 @@
+# SQLAlchemy 官方文档 Source 配置
+# 2.0 是重大迁移版本（API 全面现代化），2.1 是最新迭代。
+technology: sqlalchemy
+
+documents:
+  - version: "2.0"
+    document_type: whats_new
+    url: "https://docs.sqlalchemy.org/en/20/changelog/whatsnew_20.html"
+    filename: whatsnew_2.0.txt
+
+  - version: "2.0"
+    document_type: whats_new
+    url: "https://docs.sqlalchemy.org/en/20/changelog/migration_20.html"
+    filename: whatsnew_2.0_migration.txt
