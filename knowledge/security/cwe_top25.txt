@@ -1,0 +1,256 @@
+CWE Top 25 Most Dangerous Software Weaknesses (2024 Edition)
+Common Weakness Enumeration - Key Entries for Code Review
+
+=== CWE-79: Cross-site Scripting (XSS) ===
+Category: Injection
+Description: The application does not neutralize or incorrectly neutralizes user-controllable input
+before it is placed in output used as a web page served to other users.
+Impact: Attacker can execute arbitrary JavaScript in the victim's browser, steal session cookies,
+redirect users, or deface pages.
+Detection: Search for user input reflected in HTML output without encoding.
+Prevention: Use context-aware output encoding (HTML entity, URL, JavaScript, CSS encoding).
+Use templating engines with auto-escaping. Implement Content Security Policy headers.
+Example (Python/Flask vulnerable):
+  return f"<h1>Hello {user_input}</h1>"
+Example (Python/Flask fixed):
+  from markupsafe import escape
+  return f"<h1>Hello {escape(user_input)}</h1>"
+
+=== CWE-78: OS Command Injection ===
+Category: Injection
+Description: The application constructs an OS command using externally-influenced input but does
+not neutralize special elements that could modify the intended command.
+Impact: Arbitrary command execution on the server with application privileges.
+Detection: Search for subprocess/os.system/os.popen calls with string concatenation or f-strings.
+Prevention: Use subprocess with list arguments (never shell=True). Validate input against allowlists.
+Example (vulnerable):
+  os.system(f"ping {user_host}")
+Example (fixed):
+  subprocess.run(["ping", validated_host], shell=False)
+
+=== CWE-89: SQL Injection ===
+Category: Injection
+Description: The application constructs SQL queries using externally-influenced input but does not
+neutralize special elements that could modify the intended SQL command.
+Impact: Data theft, data modification, authentication bypass, remote code execution.
+Detection: Search for SQL query construction using string formatting/concatenation.
+Prevention: Use parameterized queries (prepared statements). Use ORM frameworks.
+Example (vulnerable):
+  cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
+Example (fixed):
+  cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+
+=== CWE-20: Improper Input Validation ===
+Category: Input Validation
+Description: The application does not validate or incorrectly validates input that can affect the
+control flow or data flow of a program.
+Impact: Varies: denial of service, information disclosure, code execution.
+Detection: Search for user input used without validation in business logic.
+Prevention: Validate all inputs at trust boundaries. Use allowlists over denylists. Enforce type,
+length, format, and range constraints.
+
+=== CWE-22: Path Traversal ===
+Category: File Operations
+Description: The application uses external input to construct a pathname but does not properly
+neutralize sequences (e.g., "../") that can resolve to a location outside the intended directory.
+Impact: Read/write/delete arbitrary files on the server.
+Detection: Search for file operations with user-supplied paths without sanitization.
+Prevention: Use path normalization and validate that resolved path is within the expected directory.
+Example (vulnerable):
+  open(os.path.join(UPLOAD_DIR, user_filename))
+Example (fixed):
+  safe_path = os.path.realpath(os.path.join(UPLOAD_DIR, user_filename))
+  if not safe_path.startswith(os.path.realpath(UPLOAD_DIR)):
+      raise ValueError("path traversal detected")
+
+=== CWE-352: Cross-Site Request Forgery (CSRF) ===
+Category: Authentication/Session
+Description: The application does not verify that a request was intentionally made by the user,
+allowing an attacker to trick a user into performing unwanted actions.
+Impact: Unauthorized state-changing operations (transfer funds, change password, delete data).
+Detection: Check state-changing endpoints (POST/PUT/DELETE) for CSRF token verification.
+Prevention: Use anti-CSRF tokens. Verify SameSite cookie attribute. Check Origin/Referer headers.
+
+=== CWE-862: Missing Authorization ===
+Category: Access Control
+Description: The application does not perform an authorization check when an actor attempts to
+access a resource or perform an action.
+Impact: Unauthorized access to sensitive data or privileged operations.
+Detection: Check if endpoints verify the user's role/permissions before executing actions.
+Prevention: Implement authorization checks on every protected endpoint. Use RBAC/ABAC frameworks.
+
+=== CWE-863: Incorrect Authorization ===
+Category: Access Control
+Description: The application performs authorization checks but does so incorrectly, allowing
+unauthorized access.
+Impact: Same as CWE-862 - unauthorized data access or privilege escalation.
+Detection: Look for IDOR (Insecure Direct Object Reference) patterns where object IDs come from
+user input without ownership verification.
+Prevention: Verify object ownership in authorization checks. Never rely solely on object IDs.
+
+=== CWE-434: Unrestricted Upload of File with Dangerous Type ===
+Category: File Operations
+Description: The application allows uploading files without sufficiently verifying the file type,
+allowing executable or dangerous file types.
+Impact: Remote code execution if uploaded files are served/executed by the web server.
+Detection: Check file upload handlers for content-type and extension validation.
+Prevention: Allowlist permitted extensions. Validate file content (magic bytes). Store outside web root.
+
+=== CWE-502: Deserialization of Untrusted Data ===
+Category: Data Handling
+Description: The application deserializes untrusted data without sufficiently verifying that the
+resulting data will be valid.
+Impact: Remote code execution, denial of service, authentication bypass.
+Detection: Search for pickle.loads, yaml.load (without SafeLoader), jsonpickle, marshal.loads.
+Prevention: Never deserialize untrusted data. Use allowlist deserialization. Use safe formats (JSON).
+Example (vulnerable):
+  obj = pickle.loads(user_data)
+Example (fixed):
+  obj = json.loads(user_data)  # JSON is safe for simple data structures
+
+=== CWE-287: Improper Authentication ===
+Category: Authentication
+Description: The application does not correctly verify the identity of a user.
+Impact: Account takeover, unauthorized access, privilege escalation.
+Detection: Check authentication flows for bypass conditions, weak password policies, missing MFA.
+Prevention: Implement multi-factor authentication. Use strong password hashing (bcrypt/argon2).
+Enforce rate limiting on login attempts.
+
+=== CWE-732: Incorrect Permission Assignment for Critical Resource ===
+Category: Configuration
+Description: The application assigns permissions to a critical resource in a way that is too
+permissive, allowing unauthorized access.
+Impact: Data breach, unauthorized modification, information disclosure.
+Detection: Check file permissions, database access controls, API endpoint permissions.
+Prevention: Apply principle of least privilege. Review and audit permission assignments.
+
+=== CWE-306: Missing Authentication for Critical Function ===
+Category: Authentication
+Description: The application does not perform authentication for a critical function.
+Impact: Anyone can perform administrative or sensitive operations.
+Detection: Check admin endpoints, configuration changes, and sensitive operations for auth checks.
+Prevention: Require authentication on all endpoints that modify data or access sensitive resources.
+
+=== CWE-843: Access of Resource Using Incompatible Type (Type Confusion) ===
+Category: Type Safety
+Description: The application allocates or initializes a resource using one type but later accesses
+it using an incompatible type.
+Impact: Memory corruption, information disclosure, code execution.
+Detection: In Python, check for unchecked type casting or union type handling without isinstance().
+Prevention: Use type checking (isinstance). Use type annotations and static analysis (mypy).
+
+=== CWE-476: NULL Pointer Dereference ===
+Category: Error Handling
+Description: The application dereferences a pointer/reference that is expected to be valid but is NULL.
+Impact: Application crash (denial of service), potential information disclosure.
+Detection: Search for attribute access on values that could be None without null checks.
+Prevention: Check for None/null before accessing attributes. Use Optional type hints.
+Example (vulnerable):
+  user = get_user(user_id)
+  return user.name  # crashes if user is None
+Example (fixed):
+  user = get_user(user_id)
+  if user is None:
+      raise HTTPException(404, "user not found")
+  return user.name
+
+=== CWE-770: Allocation of Resources Without Limits or Throttling ===
+Category: Denial of Service
+Description: The application allocates resources based on user input without establishing limits,
+allowing resource exhaustion.
+Impact: Denial of service through memory, CPU, disk, or connection exhaustion.
+Detection: Search for loops, file uploads, or database queries bounded by user input without limits.
+Prevention: Implement rate limiting. Set maximum sizes for uploads and inputs. Use timeouts.
+Example (vulnerable):
+  items = db.query("SELECT * FROM items").limit(user_requested_count)
+Example (fixed):
+  items = db.query("SELECT * FROM items").limit(min(user_requested_count, MAX_LIMIT))
+
+=== CWE-362: Race Condition ===
+Category: Concurrency
+Description: The application contains a code sequence that can run concurrently with other code,
+and the code sequence requires temporary, exclusive access to a shared resource.
+Impact: Data corruption, privilege escalation, bypass of security checks (TOCTOU).
+Detection: Look for check-then-use patterns with shared resources (files, database records).
+Prevention: Use database transactions with proper isolation levels. Use file locking. Use atomic
+operations where possible.
+
+=== CWE-269: Improper Privilege Management ===
+Category: Access Control
+Description: The application does not properly assign, check, or track privileges, allowing
+unintended privilege elevation.
+Impact: Privilege escalation from regular user to admin.
+Detection: Check role assignment, privilege escalation paths, and admin-only endpoints.
+Prevention: Enforce privilege checks on every operation. Never trust client-side role assertions.
+Re-verify privileges on the server for every request.
+
+=== CWE-295: Improper Certificate Validation ===
+Category: Cryptography
+Description: The application does not validate or incorrectly validates a certificate.
+Impact: Man-in-the-middle attacks, data interception, identity spoofing.
+Detection: Search for TLS/SSL connections with verify=False or disabled certificate checks.
+Prevention: Always verify server certificates. Use certificate pinning for critical connections.
+Example (vulnerable):
+  requests.get(url, verify=False)
+Example (fixed):
+  requests.get(url, verify=True)  # or verify="/path/to/ca-bundle.crt"
+
+=== CWE-312: Cleartext Storage of Sensitive Information ===
+Category: Cryptography
+Description: The application stores sensitive information in cleartext within a resource that might
+be accessible to another actor.
+Impact: Credential theft, data breach, account compromise.
+Detection: Search for password/secret/token storage without encryption or hashing.
+Prevention: Encrypt sensitive data at rest. Hash passwords with bcrypt/argon2. Use environment
+variables or secret managers for API keys.
+
+=== CWE-798: Use of Hard-coded Credentials ===
+Category: Cryptography
+Description: The application contains hard-coded credentials such as passwords, API keys, or
+encryption keys.
+Impact: Anyone with access to source code can extract and misuse credentials.
+Detection: Search for hardcoded strings in authentication code, API calls, database connections.
+Prevention: Use environment variables, configuration files, or secret management solutions.
+Example (vulnerable):
+  db = connect(password="super_secret_123")
+  api_key = "sk-abc123..."
+Example (fixed):
+  db = connect(password=os.environ["DB_PASSWORD"])
+  api_key = os.environ["API_KEY"]
+
+=== CWE-918: Server-Side Request Forgery (SSRF) ===
+Category: Network
+Description: The application fetches a remote resource using user-supplied URL without validating
+that the destination is authorized.
+Impact: Access to internal services, cloud metadata endpoints, port scanning, internal data theft.
+Detection: Search for HTTP requests using user-supplied URLs without validation.
+Prevention: Allowlist permitted domains/IPs. Block internal IP ranges (10.x, 172.16-31.x, 169.254.x).
+Example (vulnerable):
+  response = requests.get(user_url)
+Example (fixed):
+  parsed = urlparse(user_url)
+  if parsed.hostname not in ALLOWED_HOSTS:
+      raise ValueError("URL not allowed")
+  response = requests.get(user_url)
+
+=== CWE-611: XML External Entity Reference (XXE) ===
+Category: Injection
+Description: The application processes an XML document that can contain XML entities that reference
+external URIs, allowing remote file inclusion or SSRF.
+Impact: File disclosure, SSRF, denial of service, remote code execution.
+Detection: Search for XML parsing without disabling external entity processing.
+Prevention: Disable DTD and external entity processing in XML parsers.
+Example (Python vulnerable):
+  from lxml import etree
+  tree = etree.parse(user_xml)
+Example (Python fixed):
+  parser = etree.XMLParser(resolve_entities=False, no_network=True)
+  tree = etree.parse(user_xml, parser)
+
+=== CWE-119: Buffer Over-read ===
+Category: Memory Safety
+Description: The application reads data past the end or before the beginning of the intended buffer.
+Impact: Information disclosure, application crash.
+Detection: In Python, less common due to managed memory, but can occur in C extensions or via
+ctypes. Look for unchecked slice operations in C extensions.
+Prevention: Use memory-safe languages/libraries. Validate array indices and buffer sizes.

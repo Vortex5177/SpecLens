@@ -1,0 +1,9 @@
+# Pydantic 官方文档 Source 配置
+# Pydantic V2 是当前主线（项目使用 Pydantic 2.x），迁移指南覆盖 V1→V2 所有 breaking changes。
+technology: pydantic
+
+documents:
+  - version: "2.0"
+    document_type: whats_new
+    url: "https://docs.pydantic.dev/latest/migration/"
+    filename: whatsnew_pydantic_v2_migration.txt

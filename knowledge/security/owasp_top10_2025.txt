@@ -1,0 +1,227 @@
+OWASP Top 10:2025 - The Ten Most Critical Web Application Security Risks
+
+=== A01:2025 - Broken Access Control ===
+Description: Restrictions on what authenticated users are allowed to do are often not properly enforced.
+Attackers can exploit these flaws to access unauthorized functionality and/or data, such as access other
+users' accounts, view sensitive files, modify other users' data, change access rights, etc.
+
+Common Vulnerabilities:
+- Violation of the principle of least privilege or deny by default
+- Accessing protected resources by bypassing access control checks (IDOR)
+- Elevation of privilege (acting as admin when logged in as regular user)
+- Metadata manipulation (replaying or tampering JWT tokens)
+- CORS misconfiguration allowing unauthorized API access
+- Force browsing to authenticated pages without authentication
+
+Prevention:
+- Deny by default: deny access to all resources unless explicitly granted
+- Implement access control mechanisms once and reuse throughout the application
+- Enforce record ownership rather than accepting user-created data
+- Disable web server directory listing; remove file metadata from web root
+- Log access control failures; alert admins when appropriate
+- Rate limit API and controller access
+- Invalidate JWT tokens server-side after logout
+- Use unit and integration tests for access control
+
+=== A02:2025 - Security Misconfiguration ===
+Description: Security misconfiguration is the most common entry point for attackers. Applications,
+frameworks, application servers, web servers, database servers, and platforms are often shipped with
+insecure default configurations, open ports, default accounts, unnecessary services enabled, and
+outdated software.
+
+Common Vulnerabilities:
+- Unnecessary features/services enabled or installed
+- Default accounts and passwords still enabled
+- Overly permissive CORS policies
+- Error handling that leaks stack traces or sensitive info
+- Security headers not set (X-Frame-Options, CSP, HSTS)
+- Outdated or unpatched software components
+- Directory listing enabled on web servers
+
+Prevention:
+- Repeatable hardening process with minimal attack surface
+- Remove or disable unused features, frameworks, and sample code
+- Automated process to verify configurations in all environments
+- Use strong passwords; change default credentials
+- Review and update configurations as part of patch management
+- Enable security headers (CSP, HSTS, X-Content-Type-Options)
+- Send security directives to clients (e.g., caching directives)
+
+=== A03:2025 - Software Supply Chain Failures ===
+Description: Software supply chain security involves ensuring the integrity and security of all
+components used in software development, including third-party libraries, open-source packages,
+and build/deployment pipelines. Compromised supply chains can introduce backdoors, malware,
+or vulnerabilities.
+
+Common Vulnerabilities:
+- Using components with known vulnerabilities (CVEs)
+- Outdated or end-of-life software components
+- Insufficient due diligence on third-party libraries
+- Unsigned or unverified dependencies
+- Compromised package registries or mirrors
+- Insecure CI/CD pipeline configurations
+
+Prevention:
+- Maintain a software bill of materials (SBOM)
+- Regularly scan dependencies for known vulnerabilities
+- Use signed and verified packages from trusted sources
+- Implement dependency pinning and integrity checks
+- Monitor security advisories for used components
+- Secure CI/CD pipelines with access controls and audit logging
+- Remove unused dependencies and unnecessary features
+
+=== A04:2025 - Cryptographic Failures ===
+Description: Failures related to cryptography often lead to exposure of sensitive data or systems
+that should be protected. This includes weak encryption, improper key management, transmitting
+sensitive data in clear text, and deprecated hash functions.
+
+Common Vulnerabilities:
+- Transmitting sensitive data in clear text (HTTP, SMTP, FTP)
+- Using weak or outdated cryptographic algorithms (MD5, SHA1, DES)
+- Using weak encryption keys or improper key management
+- Not enforcing encryption via security headers (HSTS)
+- Not validating server certificates (accepting self-signed certs)
+- Hardcoded secrets, passwords, or cryptographic keys in source code
+
+Prevention:
+- Classify data sensitivity and apply protection accordingly
+- Encrypt all sensitive data at rest and in transit
+- Use strong, up-to-date algorithms (AES-256, RSA-2048+, bcrypt/argon2)
+- Store passwords using adaptive hashing with salt (bcrypt, scrypt, argon2)
+- Use TLS with HSTS for all data transmission
+- Never hardcode secrets; use environment variables or secret managers
+- Implement proper key management and rotation policies
+
+=== A05:2025 - Injection ===
+Description: Injection flaws occur when untrusted data is sent to an interpreter as part of a
+command or query. The attacker's hostile data can trick the interpreter into executing unintended
+commands or accessing data without proper authorization.
+
+Common Vulnerabilities:
+- SQL injection (user input directly in SQL queries)
+- NoSQL injection (MongoDB, Redis queries from user input)
+- OS command injection (user input in shell commands)
+- LDAP injection (user input in directory queries)
+- Cross-site scripting (XSS) via HTML/JS injection
+- Template injection (user input in template engines)
+- Expression Language injection (user input in EL expressions)
+
+Prevention:
+- Use parameterized queries (prepared statements) for all database operations
+- Use ORM frameworks that auto-escape parameters
+- Validate and sanitize all user input on the server side
+- Use allowlists for input validation (reject invalid input, don't just filter)
+- Escape special characters in interpreter-specific syntax
+- Use LIMIT clauses in SQL to prevent mass data disclosure
+- Implement Content Security Policy (CSP) to mitigate XSS
+
+=== A06:2025 - Insecure Design ===
+Description: Insecure design is a broad category representing different weaknesses, expressed as
+"missing or ineffective control design." This is distinct from implementation-level bugs. A design
+that does not account for abuse cases is inherently insecure.
+
+Common Vulnerabilities:
+- Business logic flaws (race conditions, state manipulation)
+- Missing rate limiting on sensitive operations
+- No account lockout after failed login attempts
+- Insufficient authorization checks between user roles
+- Trusting client-side validation without server-side enforcement
+- Missing CAPTCHA or bot detection on critical flows
+- No multi-factor authentication for sensitive operations
+
+Prevention:
+- Conduct threat modeling for critical authentication, access control, and business logic
+- Integrate security language and controls into user stories
+- Implement segmentation (tenant isolation, least privilege)
+- Write unit and integration tests for security-critical paths
+- Rate limit APIs and controllers to prevent abuse
+- Design for defense in depth (multiple layers of protection)
+- Separate business logic from security controls
+
+=== A07:2025 - Authentication Failures ===
+Description: Authentication failures occur when the application does not correctly confirm the user's
+identity, leading to compromised passwords, session hijacking, and account takeover.
+
+Common Vulnerabilities:
+- Allowing brute force or automated credential attacks
+- Permitting weak passwords ("password123", "admin")
+- Storing passwords in plain text or with weak hashing
+- Missing or ineffective multi-factor authentication
+- Session ID exposed in URLs (session fixation)
+- Not invalidating sessions after logout or timeout
+- Incorrect implementation of "remember me" functionality
+
+Prevention:
+- Implement multi-factor authentication (MFA) where possible
+- Enforce strong password policies (length, complexity, breach database checks)
+- Use rate limiting and progressive delays for failed login attempts
+- Store passwords with strong adaptive hashing (bcrypt, argon2) with per-user salt
+- Use server-side session management with secure session ID generation
+- Invalidate sessions server-side after logout or timeout
+- Log authentication failures and alert administrators
+
+=== A08:2025 - Software or Data Integrity Failures ===
+Description: Software and data integrity failures relate to code and infrastructure that does not
+protect against integrity violations. This includes insecure CI/CD pipelines, auto-update without
+verification, and deserialization of untrusted data.
+
+Common Vulnerabilities:
+- Auto-update functionality without integrity verification
+- Using plugins or libraries from untrusted sources without verification
+- Insecure deserialization (unmarshalling untrusted data)
+- CI/CD pipeline without proper access control or integrity checks
+- Unsigned updates or patches
+- Not using checksums or digital signatures for data verification
+
+Prevention:
+- Use digital signatures to verify software updates and patches
+- Ensure libraries are consumed from trusted repositories (signed packages)
+- Use code review processes and secure CI/CD pipelines
+- Verify serialization/deserialization uses type constraints
+- Implement integrity checks on serialized data (HMAC, digital signatures)
+- Ensure dependency downloads use HTTPS from verified sources
+- Restrict deserialization to safe types only
+
+=== A09:2025 - Security Logging and Alerting Failures ===
+Description: Insufficient logging, detection, monitoring, and active response allow attackers to
+achieve their goals without being noticed. This includes failing to log security events, not
+alerting on suspicious activity, and not having incident response plans.
+
+Common Vulnerabilities:
+- Auditable events (login, access control failures) not logged
+- Only logging on local storage without centralized aggregation
+- Logs visible only to operations, not to security teams
+- No alerting thresholds or automated response for suspicious activity
+- Not detecting and escalating active attacks in real-time
+- Logs easily accessible or modifiable by attackers
+
+Prevention:
+- Log all login, access control, and server-side input validation failures
+- Use a centralized log management and monitoring platform
+- Ensure logs are in a format easily consumed by log management tools
+- Implement alerting thresholds and escalation procedures
+- Protect logs with the same confidentiality as sensitive data
+- Establish an incident response and recovery plan (e.g., NIST 800-61)
+- Implement real-time or near-real-time log monitoring
+
+=== A10:2025 - Mishandling of Exceptional Conditions ===
+Description: Mishandling of exceptional conditions (errors, exceptions, crashes) can lead to
+information disclosure, denial of service, or even code execution. Applications that do not
+handle exceptions properly may expose internal details or enter inconsistent states.
+
+Common Vulnerabilities:
+- Exposing stack traces or internal paths in error messages
+- Crashing the application with unexpected input
+- Not handling timeouts or network failures gracefully
+- Leaving resources (files, connections) open on errors
+- Inconsistent state after partial failures
+- Verbose error messages revealing system architecture
+
+Prevention:
+- Implement proper exception handling with generic error messages for users
+- Log detailed error information server-side (not exposed to users)
+- Use structured error responses (consistent error format)
+- Handle all edge cases: timeouts, null values, unexpected input
+- Release resources properly in finally/cleanup blocks
+- Implement circuit breakers for external service dependencies
+- Test error handling paths as part of integration testing

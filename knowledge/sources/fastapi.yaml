@@ -1,0 +1,10 @@
+# FastAPI 官方文档 Source 配置
+# Release Notes 是单页全版本合集（0.1→0.141），保存在最新版本目录下；
+# 迁移检索区间 (current, target] 包含 target，因此任何迁移到 0.141 的场景都能命中。
+technology: fastapi
+
+documents:
+  - version: "0.141"
+    document_type: whats_new
+    url: "https://fastapi.tiangolo.com/release-notes/"
+    filename: whatsnew_release_notes.txt

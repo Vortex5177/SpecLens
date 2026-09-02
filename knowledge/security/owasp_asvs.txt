@@ -1,0 +1,242 @@
+OWASP Application Security Verification Standard (ASVS) 4.0
+Key Requirements for Code Review
+
+=== V1: Architecture, Design and Threat Modeling ===
+V1.1 Secure SDLC:
+- V1.1.1: Verify use of a secure SDLC with security at each phase
+- V1.1.2: Verify use of threat modeling for every change or sprint planning
+- V1.1.4: Verify all user stories contain security constraints ("As a user, I should be protected from...")
+- V1.1.6: Verify all security controls have centralized implementations
+
+V1.2 Authentication Architecture:
+- V1.2.1: Verify all communication between components is encrypted (TLS)
+- V1.2.2: Verify all components enforce the same security policies
+- V1.2.3: Verify server-side enforcement of all access control rules
+- V1.2.4: Verify all application flows and security controls include security logging
+
+V1.4 Access Control Architecture:
+- V1.4.1: Verify trusted enforcement points enforce access control (gateways, servers, serverless)
+- V1.4.4: Verify principle of least privilege throughout the application
+- V1.4.5: Verify access control decisions use server-side trusted data only
+
+=== V2: Authentication ===
+V2.1 Password Security:
+- V2.1.1: Verify user-set passwords are at least 12 characters
+- V2.1.2: Verify passwords of 64+ characters are permitted
+- V2.1.4: Verify no password composition rules limiting character types
+- V2.1.7: Verify password change requires current password verification
+- V2.1.9: Verify passwords are stored using approved salted hashing (bcrypt, argon2id)
+- V2.1.12: Verify password storage resists offline attacks (use slow hash with cost factor)
+
+V2.2 General Authenticator:
+- V2.2.1: Verify anti-automation controls prevent credential stuffing and brute force
+- V2.2.2: Verify MFA is not weak (no SMS-only for high-security apps)
+- V2.2.3: Verify successful authentication confirms identity ownership
+- V2.2.4: Verify email as authenticator only after proof of ownership
+- V2.2.6: Verify "forgot password" doesn't reveal current password or account existence
+
+V2.3 Authenticator Lifecycle:
+- V2.3.1: Verify initial authenticators are randomly generated (min 6 digits)
+- V2.3.2: Verify authenticators have a defined lifetime (session timeouts)
+- V2.3.3: Verify instructions for lost MFA devices include identity verification
+
+V2.5 Authentication Recovery:
+- V2.5.1: Verify activation/confirmation links don't auto-login (require credential entry)
+- V2.5.3: Verify password hint is not the password itself
+- V2.5.4: Verify password recovery questions are not used (deprecated practice)
+- V2.5.6: Verify account lockout is divided into soft and hard lockout
+
+=== V3: Session Management ===
+V3.1 Fundamental Session Management:
+- V3.1.1: Verify the application never reveals session tokens in URL parameters
+- V3.1.2: Verify session tokens are generated using approved cryptographic algorithms
+
+V3.2 Session Binding:
+- V3.2.1: Verify the application generates new session token on authentication
+- V3.2.2: Verify session tokens possess at least 128 bits of entropy
+- V3.2.3: Verify session tokens are properly scoped (SameSite, Secure, HttpOnly)
+
+V3.3 Session Termination:
+- V3.3.1: Verify logout and expiration invalidate the session token server-side
+- V3.3.2: Verify logout terminates authenticated sessions across all browsers/tabs
+- V3.3.3: Verify idle timeout period (max 30 min for sensitive apps)
+- V3.3.4: Verify absolute session timeout (max 12 hours, or 8 hours for sensitive)
+
+V3.4 Cookie-Based Session Management:
+- V3.4.1: Verify cookies use HttpOnly, Secure, and SameSite=Lax/Strict
+- V3.4.2: Verify cookie path is set appropriately for the application
+- V3.4.3: Verify session cookies are not persistent (no Max-Age/Expires)
+
+=== V4: Access Control ===
+V4.1 General Access Control:
+- V4.1.1: Verify application enforces access control on trusted service layer
+- V4.1.2: Verify URL access control is enforced on trusted server-side code
+- V4.1.3: Verify sensitive resources use specific allowlists rather than deny lists
+- V4.1.4: Verify directory listing is disabled unless deliberately required
+- V4.1.5: Verify access control decisions fail securely (deny by default)
+
+V4.2 Operation Level Access Control:
+- V4.2.1: Verify sensitive data and APIs are protected against IDOR attacks
+- V4.2.2: Verify application enforces anti-CSRF tokens for state-changing operations
+
+V4.3 Other Access Control:
+- V4.3.1: Verify API access control prevents insecure direct object references (IDOR)
+- V4.3.2: Verify user attribute-based access control (e.g., role, department)
+- V4.3.3: Verify users can only access their own data (horizontal privilege control)
+
+=== V5: Input Validation, Sanitization and Encoding ===
+V5.1 Input Validation:
+- V5.1.1: Verify the application has defenses against HTTP parameter pollution
+- V5.1.3: Verify all input is validated using positive allowlists (where possible)
+- V5.1.4: Verify structured data is strongly typed and validated (JSON schema, XML DTD)
+- V5.1.5: Verify URL redirects only allow trusted destinations
+
+V5.2 Sanitization and Sandboxing:
+- V5.2.1: Verify untrusted HTML input is sanitized with a known-safe library
+- V5.2.2: Verify untrusted structured data is validated against an allowed schema
+- V5.2.3: Verify user-supplied URLs are validated to prevent SSRF
+- V5.2.5: Verify user-supplied file data is not used in system commands (command injection)
+- V5.2.6: Verify the application protects against template injection
+- V5.2.7: Verify the application protects against SSRF by validating URLs
+
+V5.3 Output Encoding and Injection Prevention:
+- V5.3.1: Verify output encoding is relevant for the interpreter and context
+- V5.3.2: Verify SQL queries use parameterized queries or ORM (no string concatenation)
+- V5.3.3: Verify server-side data protects against LDAP injection
+- V5.3.4: Verify data protects against OS command injection
+- V5.3.5: Verify data protects against local/remote file inclusion
+- V5.3.7: Verify data protects against Expression Language injection
+- V5.3.8: Verify data protects against template injection attacks
+- V5.3.10: Verify data protects against XPath/XML injection
+
+V5.4 Memory, String, and Unmanaged Code:
+- V5.4.1: Verify memory-sensitive functions use memory-safe approaches
+- V5.4.2: Verify string handling accounts for encoding (UTF-8, Unicode normalization)
+
+V5.5 Deserialization Prevention:
+- V5.5.1: Verify serialized objects use integrity checks or encryption
+- V5.5.2: Verify deserialization only accepts necessary classes (allowlist types)
+- V5.5.3: Verify deserialization fails gracefully (no code execution)
+- V5.5.4: Verify XML parsers disable external entities and DTD processing (XXE)
+
+=== V6: Stored Cryptography ===
+V6.1 Data Classification:
+- V6.1.1: Verify regulated private data is stored encrypted at rest
+- V6.1.2: Verify regulated health data is stored encrypted at rest
+
+V6.2 Algorithms:
+- V6.2.1: Verify all cryptographic modules fail securely
+- V6.2.2: Verify random numbers are generated with proper entropy (CSPRNG)
+- V6.2.3: Verify deprecated algorithms are not used (MD5, SHA1, DES, RC4)
+- V6.2.4: Verify all crypto is performed server-side
+- V6.2.5: Verify crypto uses approved algorithms (NIST/FIPS approved)
+- V6.2.6: Verify encryption key length meets minimum (AES-128, RSA-2048)
+
+V6.3 Random Values:
+- V6.3.1: Verify all random numbers use cryptographically secure RNG
+- V6.3.2: Verify random GUIDs use v4 algorithm with CSPRNG
+
+V6.4 Secret Management:
+- V6.4.1: Verify secrets are stored in a secrets management solution
+- V6.4.2: Verify secrets are not hardcoded in source code, config, or CI/CD
+
+=== V7: Error Handling and Logging ===
+V7.1 Log Content:
+- V7.1.1: Verify application does not log credentials or payment details
+- V7.1.2: Verify application logs security events (auth success/failure, access denied)
+- V7.1.4: Verify logs contain high-risk event data (validation failures, rate limit exceeded)
+
+V7.2 Log Processing:
+- V7.2.1: Verify logs can be analyzed by centralized log management tools
+
+V7.3 Log Protection:
+- V7.3.1: Verify logs are protected from unauthorized access and modification
+- V7.3.3: Verify time sources are synchronized for accurate timestamps
+
+V7.4 Error Handling:
+- V7.4.1: Verify generic error messages are shown (no stack traces, SQL errors, paths)
+- V7.4.2: Verify logging has consistent format with all required fields
+- V7.4.3: Verify application handles unexpected errors without crashing
+- V7.4.4: Verify application has user-friendly error pages
+
+=== V8: Data Protection ===
+V8.1 General Data Protection:
+- V8.1.1: Verify sensitive data is sent in HTTP body/headers (not URL parameters)
+- V8.1.2: Verify forms with sensitive data have anti-caching headers
+- V8.1.3: Verify sensitive data is encrypted in transit (TLS everywhere)
+- V8.1.4: Verify sensitive data is not cached (Cache-Control: no-store)
+- V8.1.5: Verify backup copies of sensitive data are encrypted
+- V8.1.6: Verify sensitive data is deleted or anonymized when no longer needed
+
+V8.3 Sensitive Private Data:
+- V8.3.1: Verify sensitive data is identified and classified
+- V8.3.3: Verify sensitive data is not logged or stored in plain text
+- V8.3.4: Verify sensitive data access is auditable (who accessed what and when)
+
+V8.3.6: Verify sensitive data in memory is overwritten after use (zeroize)
+V8.3.7: Verify server-side memory does not contain sensitive data longer than necessary
+
+=== V12: Files and Resources ===
+V12.1 File Upload:
+- V12.1.1: Verify file upload does not accept large/many files causing DoS
+- V12.1.2: Verify uploaded files use allowlist of permitted extensions
+- V12.1.3: Verify uploaded files are validated by content (magic bytes, not just extension)
+- V12.1.4: Verify uploaded files are stored outside the web root
+- V12.1.5: Verify uploaded files are not directly executable by the web server
+- V12.1.6: Verify uploaded filenames are sanitized (no path traversal, no special chars)
+- V12.1.7: Verify SVG files are sanitized (no embedded scripts)
+
+V12.2 File Integrity:
+- V12.2.1: Verify files from untrusted sources are validated by hash/checksum
+
+V12.3 File Execution:
+- V12.3.1: Verify file metadata is not used directly in system commands
+- V12.3.2: Verify SSRF protections for user-supplied URLs
+- V12.3.3: Verify the application restricts file operations to safe directories
+
+V12.4 File Storage:
+- V12.4.1: Verify files from untrusted sources are stored outside web root
+- V12.4.2: Verify files from untrusted sources are scanned by antivirus
+
+V12.5 File Download:
+- V12.5.1: Verify the web tier serves only specific file types (allowlist MIME)
+- V12.5.2: Verify direct requests to uploaded files never execute as HTML/JS
+
+=== V13: API and Web Service ===
+V13.1 Generic Web Service Security:
+- V13.1.1: Verify all components use the same encodings and parsers
+- V13.1.3: Verify API URLs don't expose sensitive info (API keys, session tokens)
+- V13.1.4: Verify response headers include Content-Type with charset
+- V13.1.5: Verify unknown or unexpected content types are rejected
+
+V13.2 RESTful Web Service:
+- V13.2.1: Verify JSON schema validation is in place before processing
+- V13.2.2: Verify REST services use CSRF protection for state-changing operations
+- V13.2.5: Verify REST API uses appropriate HTTP methods (GET=read, POST=create, etc.)
+- V13.2.6: Verify CORS policy does not permit all origins for authenticated endpoints
+
+V13.3 SOAP Web Service:
+- V13.3.1: Verify XML schema validation (DTD disabled, schema enforced)
+
+V13.4 GraphQL:
+- V13.4.1: Verify GraphQL uses allowlist of permitted queries
+- V13.4.2: Verify GraphQL implements query depth/complexity limiting
+- V13.4.3: Verify GraphQL authorization is applied at the business logic layer
+
+=== V14: Configuration ===
+V14.1 Build and Deploy:
+- V14.1.1: Verify build process is automated, repeatable, and documented
+- V14.1.3: Verify build output does not include unnecessary files (tests, docs, samples)
+- V14.1.4: Verify third-party components come from predefined, trusted repositories
+- V14.1.5: Verify SBOM is maintained for all third-party dependencies
+
+V14.2 Dependency:
+- V14.2.1: Verify all components are up to date (use dependency checkers)
+- V14.2.2: Verify unnecessary features and documentation are removed
+- V14.2.4: Verify third-party components come from signed repositories
+- V14.2.5: Verify client-side assets (JS, CSS) are integrity-checked (SRI)
+
+V14.3 Unintended Security Misconfiguration:
+- V14.3.1: Verify server hardening (unnecessary ports/services disabled)
+- V14.3.2: Verify debug features are disabled in production
+- V14.3.3: Verify security headers are present (CSP, X-Frame-Options, HSTS)

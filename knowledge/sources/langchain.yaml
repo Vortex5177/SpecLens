@@ -1,0 +1,25 @@
+# LangChain 官方文档 Source 配置
+# v1 是当前主线（项目使用 langchain>=1.3），0.3→1.0 是最大迁移跳跃。
+# 文档已迁移到 docs.langchain.com。
+technology: langchain
+
+documents:
+  - version: "1.0"
+    document_type: whats_new
+    url: "https://docs.langchain.com/oss/python/releases/langchain-v1"
+    filename: whatsnew_langchain_v1.txt
+
+  - version: "1.0"
+    document_type: whats_new
+    url: "https://docs.langchain.com/oss/python/migrate/langchain-v1"
+    filename: whatsnew_langchain_v1_migration.txt
+
+  - version: "0.3"
+    document_type: whats_new
+    url: "https://python.langchain.com/docs/versions/v0_3/"
+    filename: whatsnew_v0.3_migration.txt
+
+  - version: "0.2"
+    document_type: whats_new
+    url: "https://python.langchain.com/docs/versions/v0_2/"
+    filename: whatsnew_v0.2_migration.txt
