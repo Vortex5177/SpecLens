@@ -1,12 +1,14 @@
-"""节点 2：review（Agent 动态决策 + LLM 结构化输出，Phase 8/9/11）。
+"""节点 2：review（Phase 12：两阶段管线 + Agent 路径双向复用）。
 
 职责边界（规格原则 3）：
-- Agent 负责"需要哪些上下文"：按需调用四个只读工具检索官方文档/安全规范/相关文件
-- LLM 负责理解与判断：产出结构化问题列表（Structured Output）
+- code_review：默认走两阶段管线（pipeline.py）：阶段 1 无工具侦察产出嫌疑清单，
+  阶段 2 程序 for 循环逐条"检索 + 单次确认"；阶段 1 失败回退 Agent 路径
+- migration：双向对照 = 文档方向（原 Agent 路径，不动）+ 代码方向（管线），
+  按 (file, technology) 合并并标注 confidence（high/medium/low）
+- Agent 路径（保留）：Agent 负责"需要哪些上下文"：按需调用只读工具；
+  LLM 负责理解与判断：产出结构化问题列表（Structured Output）
 - 证据规则（规格第 21 节）：依据必须来自检索结果，知识库无证据时
   source 标为 llm_inference，严禁伪造官方文档依据
-- Migration 与 Review 共用本节点（规格第 19 节）：仅提示词、结构化模型与
-  工具允许的版本集合不同，stream/终止/兜底逻辑完全复用。
 """
 import time
 from pathlib import Path
@@ -17,6 +19,11 @@ from langgraph.errors import GraphRecursionError
 
 from app.graph.state import ReviewState
 from app.graph.tools import build_tools
+from app.graph.nodes.pipeline import (
+    merge_bidirectional,
+    run_migration_code_direction,
+    run_review_pipeline,
+)
 from app.llm import get_chat_model
 from app.models.schemas import MigrationResult, ReviewResult
 
@@ -129,7 +136,14 @@ def _synthesize_result(model, final_state: dict, step_idx: int, synth_prompt: st
             text = m.group(1)
         data = _json.loads(text)
         if isinstance(data, dict):
-            return result_cls(**data)
+            result = result_cls(**data)
+            # 代码级校验（Phase 12 补丁）：llm_inference 不得携带证据文字。
+            # 与管线同规则：LLM 偶尔把字段说明当值填进 evidence（端到端实证），
+            # 统一清空：宁可丢证据，不留不可追溯的"证据"。
+            for issue in result.issues:
+                if issue.source == "llm_inference" and issue.evidence:
+                    issue.evidence = ""
+            return result
     except Exception as e:
         print(f"[review] synthesize 失败 {type(e).__name__}: {e}", flush=True)
     # 最终保底：返回空结果（字段兼容 ReviewResult / MigrationResult）
@@ -261,9 +275,14 @@ def _build_human_content(state: ReviewState) -> str:
     )
 
 
-def review(state: ReviewState) -> dict:
-    t0 = time.monotonic()
-    print(f"[review] 开始 review 节点（{state['mode']}）, t={t0:.1f}", flush=True)
+def _review_with_agent(state: ReviewState, t0: float) -> dict:
+    """原 Agent 路径（Phase 8/9/11 实现，逻辑未动）：动态工具循环 + 结构化输出。
+
+    Phase 12 起的角色：
+    - code_review：两阶段管线的回退路径（阶段 1 失败时启用）
+    - migration：双向对照的"文档方向"
+    """
+    print(f"[review] Agent 路径开始（{state['mode']}）, t={t0:.1f}", flush=True)
     is_migration = state["mode"] == "migration"
     target_versions = state.get("target_versions") or {}
     project_dir = Path(state["project_path"])
@@ -349,3 +368,49 @@ def review(state: ReviewState) -> dict:
         "summary": result.summary,
         "issues": [issue.model_dump() for issue in result.issues],
     }
+
+
+def review(state: ReviewState) -> dict:
+    """节点 2 分发器（Phase 12）。
+
+    - code_review：两阶段管线（发现-验证分离）；阶段 1 失败回退 Agent 路径
+    - migration：文档方向（Agent，原路径不动）+ 代码方向（管线）双向对照合并
+    """
+    t0 = time.monotonic()
+    print(f"[review] 开始 review 节点（{state['mode']}）, t={t0:.1f}", flush=True)
+    model = get_chat_model()
+
+    if state["mode"] == "migration":
+        # 文档方向：原 Agent 路径（规格第 19 节实现，保持不动）
+        doc_result = _review_with_agent(state, t0)
+        # 代码方向：两阶段管线（枚举用法点 -> 逐条区间检索验证）
+        try:
+            code_issues = run_migration_code_direction(state, model, t0)
+        except Exception as e:
+            print(
+                f"[review] 代码方向失败（文档方向结果保留）: {type(e).__name__}: {e}",
+                flush=True,
+            )
+            code_issues = []
+        merged = merge_bidirectional(doc_result["issues"], code_issues)
+        high = sum(1 for i in merged if i.get("confidence") == "high")
+        summary = (
+            f"{doc_result['summary']}（双向对照：文档方向 {len(doc_result['issues'])} 条，"
+            f"代码方向 {len(code_issues)} 条，双侧命中 {high} 条）"
+        )
+        print(
+            f"[review] 双向对照完成: 文档 {len(doc_result['issues'])} + 代码 {len(code_issues)}"
+            f" -> 合并 {len(merged)} 条（双侧 {high}）, t={time.monotonic() - t0:.1f}s",
+            flush=True,
+        )
+        return {"summary": summary, "issues": merged}
+
+    # code_review：优先两阶段管线（发现-验证分离）
+    try:
+        return run_review_pipeline(state, model, t0)
+    except Exception as e:
+        print(
+            f"[review] 管线阶段1失败，回退 Agent 路径: {type(e).__name__}: {e}",
+            flush=True,
+        )
+        return _review_with_agent(state, t0)

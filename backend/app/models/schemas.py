@@ -148,6 +148,12 @@ class MigrationIssue(BaseModel):
     # 证据来源：知识文档的 source 路径，或 "llm_inference"（规格原则 5）
     source: str
     suggested_change: str
+    # Phase 12 双向对照置信度（仅迁移合并器填写）:
+    #   high = 文档方向 + 代码方向双侧命中（变更依据与代码用法互相印证）
+    #   medium = 仅文档方向（变更已报告，代码位置建议人工复核）
+    #   low = 仅代码方向（待商榷：检索未召回变更依据）
+    # Agent 单独产出时为 None
+    confidence: IssueConfidence | None = None
     # Phase 11 由后端确定性生成，LLM 不产出此字段
     fix_prompt: str = ""
 
@@ -177,3 +183,34 @@ class MigrationResponse(BaseModel):
     project_id: str
     result: MigrationResult
     project_fix_prompt: str
+
+
+# ===== Phase 12：两阶段管线（发现-验证分离）的中间结构 =====
+# 阶段 1（侦察）的清单条目：只发现嫌疑/用法位置，不下结论；
+# 阶段 2 由程序 for 循环逐条"检索 + 单次确认"。坏条目由管线丢弃，
+# 模型仅用于结构校验与文档化（非 LLM response_format）。
+
+
+class Suspicion(BaseModel):
+    """审查阶段 1 产出的单条嫌疑（侦察清单条目，非最终审查结论）。"""
+
+    file: str
+    line: int | None = None
+    # 涉及技术；security/robustness 维度可留空
+    technology: str = ""
+    topic: IssueCategory = "api"
+    description: str
+    # 侦察阶段的严重度预估（无证据支撑，仅用于确定验证优先级）
+    severity_guess: IssueSeverity = "medium"
+    # 侦察阶段建议的检索关键词（阶段 2 直接使用）
+    query: str = ""
+
+
+class UsagePoint(BaseModel):
+    """迁移阶段 1 产出的单条用法点（代码中一处使用迁移技术的位置）。"""
+
+    file: str
+    line: int | None = None
+    technology: str
+    usage: str
+    query: str = ""

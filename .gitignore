@@ -1,5 +1,6 @@
 # ===== 敏感信息（禁止提交）=====
 .env
+.env.*
 *.pem
 *.key
 
@@ -8,6 +9,9 @@ __pycache__/
 *.py[cod]
 .venv/
 backend/.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # ===== Node =====
 node_modules/
@@ -27,10 +31,16 @@ tools/qdrant/storage/
 tools/qdrant/snapshots/
 tools/qdrant/.qdrant-initialized
 
+# ===== 备份与日志 =====
+*.bak
+*.log
+
 # ===== IDE / 系统 =====
 .vscode/
 .idea/
 .DS_Store
+Thumbs.db
+desktop.ini
 .aicoding-chat-workspace
 
 # ===== 调试产物（浏览器验证截图）=====
