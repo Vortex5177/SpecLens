@@ -1,4 +1,4 @@
-"""Migration 路由（Phase 11，规格第 19 / 25 节）。
+"""Migration 路由（规格第 19 / 25 节）。
 
 提供：
 - POST /api/migrations          创建并同步执行 Migration（与 Review 共用同一 Graph）
@@ -6,10 +6,11 @@
 
 与 Review 的差异（规格第 19 节）：
 - 输入多一个目标版本集合（当前版本 + 目标版本）
-- Agent 同时检索两个版本的规范做对比
+- 发现阶段双向进行：代码方向初筛 + 文档方向定位，统一进入同一核实入口
 - 产出 MigrationIssue（current_behavior / target_behavior / reason / suggested_change）
 
-结果持久化在 uploads/{project_id}/migration.json，重复迁移会覆盖旧结果。
+结果持久化在 uploads/{project_id}/migration.json，重复迁移会覆盖旧结果；
+响应携带完整运行报告与项目级迁移 Fix Prompt。
 """
 import json
 import re
@@ -21,7 +22,7 @@ from app.graph.graph import build_review_graph
 from app.models.schemas import (
     MigrationRequest,
     MigrationResponse,
-    MigrationResult,
+    RunReport,
 )
 
 router = APIRouter()
@@ -32,7 +33,7 @@ _ID_PATTERN = re.compile(r"^[0-9a-f]{32}$")
 
 @router.post("/migrations", response_model=MigrationResponse, status_code=201)
 def create_migration(request: MigrationRequest) -> MigrationResponse:
-    """同步执行迁移分析：分析 -> Agent 对比两版本规范 -> 生成迁移 Fix Prompt。"""
+    """同步执行迁移分析：分析 -> 双向发现与统一核实 -> 生成迁移 Fix Prompt。"""
     project_id = request.project_id
     if not _ID_PATTERN.match(project_id):
         raise HTTPException(status_code=400, detail="无效的项目 ID")
@@ -62,26 +63,26 @@ def create_migration(request: MigrationRequest) -> MigrationResponse:
     if final_state.get("error"):
         raise HTTPException(status_code=400, detail=final_state["error"])
 
-    result = MigrationResult(summary=final_state["summary"], issues=final_state["issues"])
+    report = RunReport.model_validate(final_state["report"])
     payload = {
         "migration_id": project_id,
         "project_id": project_id,
         "target_versions": target_versions,
-        "result": result.model_dump(),
+        "result": report.model_dump(),
         "project_fix_prompt": final_state["project_fix_prompt"],
     }
     _save_migration(project_dir, payload)
     return MigrationResponse(
         migration_id=project_id,
         project_id=project_id,
-        result=result,
+        result=report,
         project_fix_prompt=final_state["project_fix_prompt"],
     )
 
 
 @router.get("/migrations/{migration_id}")
 def get_migration(migration_id: str) -> dict:
-    """查询已保存的 Migration 结果（含项目级迁移 Fix Prompt）。"""
+    """查询已保存的 Migration 结果（含完整运行报告与项目级迁移 Fix Prompt）。"""
     if not _ID_PATTERN.match(migration_id):
         raise HTTPException(status_code=400, detail="无效的 Migration ID")
     migration_path = config.UPLOAD_DIR / migration_id / "migration.json"

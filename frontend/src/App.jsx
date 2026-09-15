@@ -32,11 +32,9 @@ function App() {
     setReview(null);
   }
 
-  // 是否所有待确认版本都已确认（规格第 9 节：未确认不得开始审查）
+  // 部分确认不阻断审查（V2）：待确认版本仅不参与版本敏感检索，
+  // 是否覆盖缺口由后端运行报告的 status / coverage 说明
   const versions = uploadResult?.analysis.versions || [];
-  const reviewEnabled = versions.every(
-    (v) => v.status === "exact" || v.confirmed
-  );
 
   useEffect(() => {
     fetch("/api/health")
@@ -98,7 +96,7 @@ function App() {
                   key={uploadResult.project_id}
                   projectId={uploadResult.project_id}
                   versions={versions}
-                  reviewEnabled={reviewEnabled}
+                  onStart={() => setReview(null)}
                   onCompleted={setReview}
                 />
               )}

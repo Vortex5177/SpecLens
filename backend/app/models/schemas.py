@@ -1,13 +1,13 @@
-"""Pydantic 数据模型。
+"""Pydantic 数据模型（V2：统一中间契约与运行报告）。
 
-Phase 2：项目上传与分析结果的响应模型。
-Phase 3：依赖版本识别与用户确认。
-Phase 9：Review 结构化输出（Structured Output）。
-Phase 11：Migration 结构化输出（规格第 19 节，与 Review 共用引擎）。
+V2 核心变化：
+- LLM 只产出判断（VerificationOutput），程序持有证据（Evidence）与候选身份（Candidate）。
+- 运行报告（RunReport）携带状态 / 覆盖 / 计数 / 未决 / 错误，取代仅含 summary+issues 的旧结果。
+- Migration 双向发现的候选统一进入同一核实入口，origin 仅记录来源，不决定置信度。
 """
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 # 版本状态：
 # - exact：从依赖文件读到精确版本（含锁文件）
@@ -71,15 +71,102 @@ class ErrorResponse(BaseModel):
     detail: str
 
 
-# ===== Phase 9：Review 结构化输出（规格第 20 节）=====
+# ===== 枚举 =====
 # 审查维度仅三个（规格第 18 节）：API 合规 / 安全 / 健壮性。
 IssueCategory = Literal["api", "security", "robustness"]
 IssueSeverity = Literal["high", "medium", "low"]
 IssueConfidence = Literal["high", "medium", "low"]
+# 核实判决与证据状态（方案四节）：三者正交，分开记录。
+Decision = Literal["confirmed", "rejected", "insufficient"]
+EvidenceStatus = Literal["document_supported", "inferred", "none"]
+CandidateOrigin = Literal["code", "document"]
+RunStatus = Literal["complete", "partial", "failed"]
+
+
+class Evidence(BaseModel):
+    """程序持有的不可变证据（检索结果或文档枚举块的快照）。
+
+    evidence_id 由程序根据来源 / 元数据 / 内容哈希确定性生成，
+    LLM 只允许引用该 ID，不允许自写证据正文或来源。
+    """
+
+    evidence_id: str
+    content: str
+    source: str
+    source_url: str = ""
+    technology: str = ""
+    version: str = ""
+    document_type: str = ""
+    chunk_index: int | None = None
+    content_hash: str
+    # 检索命中信息，仅表示召回相似度，不是问题正确概率；文档枚举块无此值。
+    retrieval_score: float | None = None
+
+
+class Candidate(BaseModel):
+    """待核实候选（发现阶段产物，不是最终结论）。
+
+    file / line / technology / dimension 由程序校验后绑定，
+    LLM 不得在核实阶段改写这些身份字段。
+    """
+
+    candidate_id: str
+    # suspicion = Review 嫌疑；usage = Migration 用法点（含文档方向定位的用法）
+    kind: Literal["suspicion", "usage"]
+    # 发现来源：代码初筛 / 文档方向；两路命中同一候选时为 ["code", "document"]
+    origin: list[CandidateOrigin]
+    file: str
+    line: int | None = None
+    technology: str = ""
+    dimension: IssueCategory = "api"
+    description: str
+    # 初筛严重度预估：仅决定核实优先级，不是最终严重度
+    severity_guess: IssueSeverity = "medium"
+    query_terms: str = ""
+    symbol: str = ""
+    # 文档方向候选的种子证据（必须是本批枚举块 ID，程序校验）
+    seed_evidence_ids: list[str] = []
+
+
+class EvidenceBundle(BaseModel):
+    """单个候选本次允许引用的证据集合与检索状态。"""
+
+    candidate_id: str
+    evidence_ids: list[str] = []
+    evidences: list[Evidence] = []
+    # ok = 检索成功；no_hit = 成功但无命中；retrieval_error = 检索失败
+    retrieval_status: Literal["ok", "no_hit", "retrieval_error"] = "ok"
+    retrieval_note: str = ""
+
+
+class VerificationOutput(BaseModel):
+    """核实模型的结构化输出（extra=forbid：未知字段即失败，不做自动修复）。
+
+    LLM 只输出判断与解释；file / source / 证据正文等身份字段由程序绑定。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Decision
+    evidence_status: EvidenceStatus
+    # 只能引用本候选 EvidenceBundle 中的 ID；程序校验，非法即整次核实无效
+    evidence_ids: list[str] = []
+    title: str = ""
+    reason: str = ""
+    severity: IssueSeverity | None = None
+    confidence: IssueConfidence | None = None
+    suggestion: str = ""
+    # Migration 专用：成立时必填（程序校验）
+    current_behavior: str = ""
+    target_behavior: str = ""
+    change_reason: str = ""
+
+
+# ===== Review Issue（程序绑定身份 + 通过校验的判断）=====
 
 
 class ReviewIssue(BaseModel):
-    """单个审查问题（LLM 直接产出，fix_prompt 由后端确定性生成）。"""
+    """单个审查问题。身份字段来自 Candidate，判断字段来自 VerificationOutput。"""
 
     file: str
     line: int | None = None
@@ -88,20 +175,17 @@ class ReviewIssue(BaseModel):
     confidence: IssueConfidence
     title: str
     description: str
-    # 依据：引用检索到的文档内容；无证据时留空并将 source 设为 llm_inference
+    # 旧字段（兼容展示）：由程序从 evidences 派生，不再接受模型自写
     evidence: str = ""
-    # 证据来源：知识文档的 source 路径，或 "llm_inference"（规格第 21 节：不得伪造官方依据）
     source: str
     suggestion: str
-    # Phase 10 由后端确定性生成，LLM 不产出此字段
+    # V2 新增：证据状态 / 发现来源 / 结构化证据快照 / 候选血缘
+    evidence_status: EvidenceStatus = "inferred"
+    origin: list[CandidateOrigin] = []
+    evidences: list[Evidence] = []
+    candidate_ids: list[str] = []
+    # 由后端模板确定性生成，LLM 不产出此字段
     fix_prompt: str = ""
-
-
-class ReviewResult(BaseModel):
-    """Review 阶段的结构化输出（Agent 的 response_format）。"""
-
-    summary: str
-    issues: list[ReviewIssue]
 
 
 class ReviewRequest(BaseModel):
@@ -112,105 +196,83 @@ class ReviewRequest(BaseModel):
 
 
 class ReviewResponse(BaseModel):
-    """POST /api/reviews 响应。"""
+    """POST /api/reviews 响应（含完整运行报告与项目级 Fix Prompt）。"""
 
     review_id: str
     project_id: str
     mode: str
-    result: ReviewResult
+    result: "RunReport"
+    project_fix_prompt: str = ""
 
 
-# ===== Phase 11：Migration 结构化输出（规格第 19 节）=====
-# Migration Issue 的核心是对比：当前行为（代码现状，基于当前版本规范）
-# vs 目标行为（目标版本规范），字段与 Review Issue 不同，故独立建模。
+# ===== Migration Issue =====
 
 
 class MigrationIssue(BaseModel):
-    """单个迁移问题（LLM 直接产出，fix_prompt 由后端确定性生成）。"""
+    """单个迁移问题（与 Review 共用核实入口，行为对比字段独立建模）。"""
 
     file: str
     line: int | None = None
-    # 发生迁移的技术与版本对，如 fastapi 0.110 -> 0.120
     technology: str
     current_version: str
     target_version: str
     title: str
-    # 迁移影响程度：不迁会导致破坏性变化为 high，需调整为 medium，建议性为 low
     severity: IssueSeverity
-    # 代码在当前版本下的行为/用法（可结合检索到的当前版本规范）
     current_behavior: str
-    # 目标版本的规范要求或行为变化（必须来自检索证据或标注为推理）
     target_behavior: str
-    # 为什么需要迁移（版本差异说明）
     reason: str
-    # 依据：引用检索到的文档内容；无证据时留空并将 source 设为 llm_inference
     evidence: str = ""
-    # 证据来源：知识文档的 source 路径，或 "llm_inference"（规格原则 5）
     source: str
     suggested_change: str
-    # Phase 12 双向对照置信度（仅迁移合并器填写）:
-    #   high = 文档方向 + 代码方向双侧命中（变更依据与代码用法互相印证）
-    #   medium = 仅文档方向（变更已报告，代码位置建议人工复核）
-    #   low = 仅代码方向（待商榷：检索未召回变更依据）
-    # Agent 单独产出时为 None
-    confidence: IssueConfidence | None = None
-    # Phase 11 由后端确定性生成，LLM 不产出此字段
+    # V2：confidence 由核实输出决定，不再按发现方向自动升级
+    confidence: IssueConfidence
+    evidence_status: EvidenceStatus = "inferred"
+    origin: list[CandidateOrigin] = []
+    evidences: list[Evidence] = []
+    candidate_ids: list[str] = []
     fix_prompt: str = ""
 
 
-class MigrationResult(BaseModel):
-    """Migration 阶段的结构化输出（Agent 的 response_format）。"""
-
-    summary: str
-    issues: list[MigrationIssue]
-
-
 class MigrationRequest(BaseModel):
-    """POST /api/migrations 请求体。
-
-    target_versions 只填需要迁移的技术（不强制全部技术都迁）。
-    """
+    """POST /api/migrations 请求体（只填需要迁移的技术）。"""
 
     project_id: str
-    # 复用 VersionSelection（technology + version），此处 version 为目标版本
     target_versions: list[VersionSelection]
 
 
 class MigrationResponse(BaseModel):
-    """POST /api/migrations 响应（直接携带项目级 Fix Prompt，前端无需二次请求）。"""
+    """POST /api/migrations 响应。"""
 
     migration_id: str
     project_id: str
-    result: MigrationResult
+    result: "RunReport"
     project_fix_prompt: str
 
 
-# ===== Phase 12：两阶段管线（发现-验证分离）的中间结构 =====
-# 阶段 1（侦察）的清单条目：只发现嫌疑/用法位置，不下结论；
-# 阶段 2 由程序 for 循环逐条"检索 + 单次确认"。坏条目由管线丢弃，
-# 模型仅用于结构校验与文档化（非 LLM response_format）。
+# ===== V2 运行报告 =====
 
 
-class Suspicion(BaseModel):
-    """审查阶段 1 产出的单条嫌疑（侦察清单条目，非最终审查结论）。"""
+class RunReport(BaseModel):
+    """一次分析的完整运行报告。
 
-    file: str
-    line: int | None = None
-    # 涉及技术；security/robustness 维度可留空
-    technology: str = ""
-    topic: IssueCategory = "api"
-    description: str
-    # 侦察阶段的严重度预估（无证据支撑，仅用于确定验证优先级）
-    severity_guess: IssueSeverity = "medium"
-    # 侦察阶段建议的检索关键词（阶段 2 直接使用）
-    query: str = ""
+    issues 只含已确认且通过校验的问题；未决 / 失败 / 未调度分别记录，
+    零问题 + complete 才能表述为「已审查范围内未发现问题」。
+    """
+
+    schema_version: int = 2
+    run_id: str
+    mode: str
+    status: RunStatus
+    summary: str
+    # Review 与 Migration 的 issue 结构不同，此处存已校验的 dict 序列
+    issues: list[dict] = []
+    coverage: dict = {}
+    counts: dict = {}
+    # 已运行但无法可靠判断的候选（含 Migration 推断型建议）
+    unresolved: list[dict] = []
+    errors: list[dict] = []
 
 
-class UsagePoint(BaseModel):
-    """迁移阶段 1 产出的单条用法点（代码中一处使用迁移技术的位置）。"""
-
-    file: str
-    line: int | None = None
-    technology: str
-    usage: str
-    query: str = ""
+# 兼容前向引用（RunReport 在 Issue 响应模型之后定义）
+ReviewResponse.model_rebuild()
+MigrationResponse.model_rebuild()

@@ -21,6 +21,20 @@ function VersionPanel({ versions, projectId, onConfirmed }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // 与服务器返回的版本状态保持同步（V2）：确认后服务器返回 updatedAnalysis.versions，
+  // 已确认行回填服务器版本；未确认行保留用户输入，避免同项目再次确认时行状态过期
+  useEffect(() => {
+    setRows(versions);
+    setInputs((prev) =>
+      Object.fromEntries(
+        versions.map((v) => [
+          v.technology,
+          v.confirmed ? v.version || "" : (prev[v.technology] ?? v.version ?? ""),
+        ])
+      )
+    );
+  }, [versions]);
+
   useEffect(() => {
     fetch("/api/knowledge/catalog")
       .then((res) => res.json())
@@ -88,16 +102,8 @@ function VersionPanel({ versions, projectId, onConfirmed }) {
       return;
     }
 
-    // 待确认的技术必须全部填写（规格第 9 节）
-    const missing = rows.filter(
-      (v) => v.status === "needs_confirmation" && !v.confirmed && !inputs[v.technology].trim()
-    );
-    if (missing.length > 0) {
-      setError(
-        `请填写待确认技术的具体版本：${missing.map((v) => v.technology).join("、")}`
-      );
-      return;
-    }
+    // 部分确认也生效（V2）：只提交填写了版本的技术；
+    // 未确认的技术不参与版本敏感检索，运行报告会说明覆盖缺口
 
     setSubmitting(true);
     setError("");
@@ -124,7 +130,7 @@ function VersionPanel({ versions, projectId, onConfirmed }) {
       <h3>
         检测到的版本
         {pendingCount > 0 && (
-          <span className="badge badge-warning">{pendingCount} 项待确认</span>
+          <span className="badge badge-warning">{pendingCount} 项待确认（不填则不参与版本敏感检索）</span>
         )}
       </h3>
 

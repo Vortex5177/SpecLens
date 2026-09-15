@@ -14,6 +14,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from app import config
 from app.services import retrieval
+from app.services.retrieval import RetrievalError
 from app.services.ingestion import (
     catalog_knowledge,
     delete_document_vectors,
@@ -375,7 +376,10 @@ def search(
     limit: int = Query(default=5, ge=1, le=20),
 ) -> dict:
     """Official Retriever：缺少 technology 或 version 直接 422，绝不跨版本返回。"""
-    results = retrieval.search_official_docs(technology, version, query, limit)
+    try:
+        results = retrieval.search_official_docs(technology, version, query, limit)
+    except RetrievalError as exc:
+        raise HTTPException(status_code=503, detail=f"知识检索服务暂不可用：{exc}") from exc
     return {"technology": technology, "version": version, "results": results}
 
 
@@ -388,9 +392,12 @@ def search_migration(
     limit: int = Query(default=5, ge=1, le=20),
 ) -> dict:
     """Migration Retriever（SpecLens §6）：迁移区间 What's New + 目标版本 Reference。"""
-    results = retrieval.search_migration_docs(
-        technology, current_version, target_version, query, limit
-    )
+    try:
+        results = retrieval.search_migration_docs(
+            technology, current_version, target_version, query, limit
+        )
+    except RetrievalError as exc:
+        raise HTTPException(status_code=503, detail=f"知识检索服务暂不可用：{exc}") from exc
     return {
         "technology": technology,
         "current_version": current_version,
@@ -405,5 +412,8 @@ def search_security(
     limit: int = Query(default=5, ge=1, le=20),
 ) -> dict:
     """Security Retriever：安全规范与技术版本无关，不需要 technology/version。"""
-    results = retrieval.search_security_docs(query, limit)
+    try:
+        results = retrieval.search_security_docs(query, limit)
+    except RetrievalError as exc:
+        raise HTTPException(status_code=503, detail=f"知识检索服务暂不可用：{exc}") from exc
     return {"results": results}

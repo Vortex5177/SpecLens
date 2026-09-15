@@ -59,6 +59,8 @@ CHUNK_OVERLAP = 60
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+# 可选：V2 离线联调开关。置 true 时跳过 API Key 检查（仅限测试假模型场景）
+LLM_ALLOW_MISSING_KEY = os.getenv("LLM_ALLOW_MISSING_KEY", "").lower() == "true"
 
 # ===== Code Review 限制（Phase 7）=====
 # 纳入审查的源码文件数上限（按文件树顺序取前 N 个）
@@ -69,3 +71,28 @@ REVIEW_MAX_FILE_CHARS = 8000
 REVIEW_CODE_EXTENSIONS = {
     ".py", ".js", ".jsx", ".ts", ".tsx", ".java", ".go", ".rs",
 }
+
+# ===== V2 运行预算（方案第六节，初值待评测，只做离线代理预算）=====
+# 每字符上限是离线输入代理，不是真实 token；真实 token 仅从模型 usage 记录。
+# 代码初筛：每次运行最多 1 次（无独立开关，恒为 1）
+# 文档方向：读取分块总数 / 每次定位输入分块数 / 最多定位调用次数
+DOC_ENUM_MAX_BLOCKS = 40
+DOC_SCAN_BATCH_BLOCKS = 10
+DOC_SCAN_MAX_CALLS = 4
+# 进入核实的候选总数（两路合计，精确去重后裁剪）
+VERIFY_MAX_CANDIDATES = 32
+# 应用层 LLM 调用总数上限：1 初筛 + 4 文档定位 + 32 核实
+RUN_MAX_LLM_CALLS = 37
+# 单次完整模型输入字符上限（提示词 + 代码 + 证据 + 格式说明之和）
+RUN_MAX_INPUT_CHARS_PER_CALL = 180000
+# 整次运行累计模型输入字符上限
+RUN_MAX_TOTAL_INPUT_CHARS = 2000000
+# 每条核实的 Evidence 正文总字符上限（按完整分块选择，不截断单块）
+VERIFY_MAX_EVIDENCE_CHARS = 8000
+# 单次输出 token 上限（构造模型时传入）
+LLM_MAX_OUTPUT_TOKENS = 8192
+# 单次模型请求超时（秒）与整次运行时限（秒）
+LLM_CALL_TIMEOUT_SECONDS = 120
+RUN_DEADLINE_SECONDS = 900
+# LLM SDK 层重试次数：0，避免叠加救援路径
+LLM_MAX_RETRIES = 0

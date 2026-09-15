@@ -1,13 +1,16 @@
-"""节点 3：generate_result（确定性，无 LLM，Phase 10/11）。
+"""节点 3：generate_result（确定性，无 LLM）。
 
 职责：
-- 为每个 Issue 生成单问题 Fix Prompt（规格第 22 节）
-- 生成项目级 Fix Prompt（规格第 23 节）
-- Migration 模式生成迁移 Fix Prompt（规格第 19 节，同样模板化）
+- 为每个已确认 Issue 生成单问题 Fix Prompt（规格第 22 节）
+- 生成项目级 Fix Prompt（规格第 23 节 / 第 19 节）
+- 把 fix_prompt 回填进运行报告
 
 Fix Prompt 用模板确定性生成而不是再调一次 LLM：
 规格要求的字段（技术栈/版本/问题/依据/要求/限制）全部是已知信息，
 模板更简单、可预测、不花钱。
+
+V2：只处理已确认问题（unresolved 候选一律不进模板）；
+证据标注区分 document_supported 与无官方文档证据的推断。
 """
 from app.graph.state import ReviewState
 
@@ -53,7 +56,7 @@ _PROJECT_FIX_TEMPLATE = """\
 5. 全部修复完成后，按问题编号逐一解释修改内容
 """
 
-# ===== Migration Fix Prompt 模板（Phase 11，规格第 19 节）=====
+# ===== Migration Fix Prompt 模板（规格第 19 节）=====
 _MIGRATION_ISSUE_FIX_TEMPLATE = """\
 请修改 {file}，完成 {technology} {current_version} -> {target_version} 的迁移。
 
@@ -104,67 +107,83 @@ def _format_versions(confirmed_versions: dict[str, str]) -> str:
         or "（未提供版本信息，修复时基于通用最佳实践即可，不要擅自升级依赖）"
 
 
+def _evidence_text(issue: dict) -> str:
+    """证据段落：document_supported 引用证据原文，其余明确标注为推断。"""
+    if issue.get("evidence_status") == "document_supported":
+        return issue.get("evidence") or "（证据正文缺失）"
+    return "（无官方文档证据，基于 LLM 推理；请人工复核后再采纳）"
+
+
 def generate_result(state: ReviewState) -> dict:
-    """按模式分发：review 生成审查 Fix Prompt，migration 生成迁移 Fix Prompt。"""
-    if state["mode"] == "migration":
-        return _generate_migration_result(state)
-    return _generate_review_result(state)
+    """按模式分发：review 生成审查 Fix Prompt，migration 生成迁移 Fix Prompt。
+
+    结果回填 state["report"]["issues"]（每条带 fix_prompt）与 project_fix_prompt。
+    """
+    report = state["report"]
+    scope = state["run_scope"]
+    confirmed_versions = scope["confirmed_versions"]
+    if report["mode"] == "migration":
+        project_fix_prompt = _generate_migration_result(
+            report, confirmed_versions, scope["target_versions"]
+        )
+    else:
+        project_fix_prompt = _generate_review_result(report, confirmed_versions)
+    return {"report": report, "project_fix_prompt": project_fix_prompt}
 
 
-def _generate_review_result(state: ReviewState) -> dict:
-    versions_text = _format_versions(state["confirmed_versions"])
-    # 无版本降级审查：修改要求不再强调遵循版本（模板与占位说明保持一致）
+def _generate_review_result(report: dict, confirmed_versions: dict[str, str]) -> str:
+    versions_text = _format_versions(confirmed_versions)
     version_rule = (
         "严格遵循上述已确认的技术版本"
-        if state["confirmed_versions"]
+        if confirmed_versions
         else "基于通用最佳实践修改，不要擅自升级依赖"
     )
 
     issues = []
     issue_lines = []
-    for index, issue in enumerate(state["issues"], start=1):
+    for index, issue in enumerate(report["issues"], start=1):
         fix_prompt = _ISSUE_FIX_TEMPLATE.format(
             file=issue["file"],
             versions=versions_text,
             title=issue["title"],
             description=issue["description"],
             source=issue["source"],
-            evidence=issue["evidence"] or "（无知识库证据，基于 LLM 推理）",
+            evidence=_evidence_text(issue),
             suggestion=issue["suggestion"],
             version_rule=version_rule,
         )
-        issues.append({**issue, "fix_prompt": fix_prompt})
+        issue["fix_prompt"] = fix_prompt
+        issues.append(issue)
         issue_lines.append(
             f"{index}. [{issue['category']}/{issue['severity']}] {issue['file']}"
             f"{'#' + str(issue['line']) if issue.get('line') else ''}"
             f"：{issue['title']}\n   建议：{issue['suggestion']}"
         )
 
-    project_fix_prompt = _PROJECT_FIX_TEMPLATE.format(
+    report["issues"] = issues
+    return _PROJECT_FIX_TEMPLATE.format(
         versions=versions_text,
         count=len(issues),
         issues="\n\n".join(issue_lines) if issue_lines else "（未发现问题）",
         version_rule=version_rule,
     )
 
-    return {"issues": issues, "project_fix_prompt": project_fix_prompt}
 
-
-def _generate_migration_result(state: ReviewState) -> dict:
+def _generate_migration_result(
+    report: dict, confirmed_versions: dict[str, str], targets: dict[str, str]
+) -> str:
     """Migration 模式：为每个迁移点生成 Fix Prompt 与项目级迁移提示。"""
-    confirmed = state["confirmed_versions"]
-    targets = state.get("target_versions", {})
     # 未参与迁移的技术保持原版本列出（提醒不要动它们）；
     # 全部技术都迁移时直接写（无），避免套用无版本降级占位文案
-    unchanged = {tech: v for tech, v in confirmed.items() if tech not in targets}
+    unchanged = {tech: v for tech, v in confirmed_versions.items() if tech not in targets}
     unchanged_text = _format_versions(unchanged) if unchanged else "（无）"
     migrations_text = "\n".join(
-        f"- {tech} {confirmed[tech]} -> {targets[tech]}" for tech in targets
+        f"- {tech} {confirmed_versions[tech]} -> {target}" for tech, target in targets.items()
     )
 
     issues = []
     issue_lines = []
-    for index, issue in enumerate(state["issues"], start=1):
+    for index, issue in enumerate(report["issues"], start=1):
         fix_prompt = _MIGRATION_ISSUE_FIX_TEMPLATE.format(
             file=issue["file"],
             technology=issue["technology"],
@@ -175,21 +194,21 @@ def _generate_migration_result(state: ReviewState) -> dict:
             target_behavior=issue["target_behavior"],
             reason=issue["reason"],
             source=issue["source"],
-            evidence=issue["evidence"] or "（无知识库证据，基于 LLM 推理）",
+            evidence=_evidence_text(issue),
             suggested_change=issue["suggested_change"],
         )
-        issues.append({**issue, "fix_prompt": fix_prompt})
+        issue["fix_prompt"] = fix_prompt
+        issues.append(issue)
         issue_lines.append(
             f"{index}. [{issue['severity']}] {issue['technology']} "
             f"{issue['file']}{'#' + str(issue['line']) if issue.get('line') else ''}"
             f"：{issue['title']}\n   建议：{issue['suggested_change']}"
         )
 
-    project_fix_prompt = _MIGRATION_PROJECT_FIX_TEMPLATE.format(
+    report["issues"] = issues
+    return _MIGRATION_PROJECT_FIX_TEMPLATE.format(
         migrations=migrations_text,
         versions=unchanged_text,
         count=len(issues),
         issues="\n\n".join(issue_lines) if issue_lines else "（无需迁移改动）",
     )
-
-    return {"issues": issues, "project_fix_prompt": project_fix_prompt}

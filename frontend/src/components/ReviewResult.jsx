@@ -46,22 +46,166 @@ function CopyButton({ text, label }) {
 }
 
 /**
- * 证据折叠块：两种模式共用（规格原则 5：无证据时明确标注）。
+ * 发现来源徽标（V2）：origin 记录候选来自代码初筛 / 文档定位。
  */
-function EvidenceBlock({ evidence, source }) {
-  if (!evidence) {
-    return <p className="hint">依据：LLM 推断（{source}），无官方文档证据</p>;
+function OriginBadges({ origin }) {
+  const list = origin || [];
+  if (list.length === 0) return null;
+  const hasCode = list.includes("code");
+  const hasDoc = list.includes("document");
+  const label = hasCode && hasDoc ? "代码+文档" : hasCode ? "代码发现" : "文档发现";
+  return <span className="badge badge-category">{label}</span>;
+}
+
+/**
+ * 证据折叠块（V2）：优先展示结构化 evidences（含证据 ID 与来源），无证据时
+ * 明确标注为 LLM 推断；兼容旧 JSON 的单条 evidence 字符串。
+ */
+function EvidenceBlock({ issue }) {
+  const evs = issue.evidences || [];
+  if (evs.length > 0) {
+    return (
+      <details className="issue-evidence">
+        <summary>
+          证据来源：{evs.length} 条
+          {issue.evidence_status === "document_supported" ? "（文档支持）" : "（参考）"}
+        </summary>
+        {evs.map((e, i) => (
+          <div key={i}>
+            <p className="hint">
+              [{e.evidence_id}] {e.source}
+              {e.version ? ` | 版本 ${e.version}` : ""}
+              {e.retrieval_score != null ? ` | 相似度 ${e.retrieval_score}` : ""}
+            </p>
+            <pre>{e.content}</pre>
+          </div>
+        ))}
+      </details>
+    );
   }
+  if (issue.evidence) {
+    // 旧版结果兼容：单条证据字符串
+    return (
+      <details className="issue-evidence">
+        <summary>证据来源：{issue.source}</summary>
+        <pre>{issue.evidence}</pre>
+      </details>
+    );
+  }
+  const status = issue.evidence_status || "inferred";
+  const label = { document_supported: "文档支持", inferred: "LLM 推断", none: "无证据" }[status];
+  return <p className="hint">依据：{label}（{issue.source || "llm_inference"}），无官方文档证据</p>;
+}
+
+/**
+ * 运行状态与覆盖信息（V2）：status / counts / coverage / unresolved / errors。
+ * 旧版结果（无 status 字段）不展示这些块。
+ */
+function RunStatusBlock({ result, isMigration }) {
+  const status = result.status;
+  if (!status) return null; // legacy
+  const statusLabel = {
+    complete: { text: "完整分析", cls: "badge-ok" },
+    partial: { text: "部分完成（存在覆盖缺口）", cls: "badge-warning" },
+    failed: { text: "分析失败", cls: "badge-high" },
+  }[status] || { text: status, cls: "badge-warning" };
+  const counts = result.counts || {};
+  const coverage = result.coverage || {};
+
   return (
-    <details className="issue-evidence">
-      <summary>证据来源：{source}</summary>
-      <pre>{evidence}</pre>
-    </details>
+    <>
+      <div className="severity-stats">
+        <span className={`badge ${statusLabel.cls}`}>{statusLabel.text}</span>
+        {counts.candidates_total != null && (
+          <>
+            <span className="badge badge-category">候选 {counts.candidates_total}</span>
+            <span className="badge badge-category">核实 {counts.verified ?? 0}</span>
+            <span className="badge badge-ok">确认 {counts.confirmed ?? 0}</span>
+            <span className="badge badge-category">排除 {counts.rejected ?? 0}</span>
+            <span className="badge badge-warning">未决 {counts.insufficient ?? 0}</span>
+            <span className="badge badge-high">失败 {counts.failed ?? 0}</span>
+            {counts.not_scheduled > 0 && (
+              <span className="badge badge-warning">未调度 {counts.not_scheduled}</span>
+            )}
+          </>
+        )}
+      </div>
+
+      {status === "partial" && (
+        <p className="hint">
+          本次运行存在缺口（截断 / 省略文件 / 待确认版本 / 检索缺失等），未发现问题不代表范围内无问题。
+        </p>
+      )}
+      {status === "failed" && (
+        <p className="hint">发现阶段失败，未产生有效分析，详见下方错误。</p>
+      )}
+
+      {(result.unresolved || []).length > 0 && (
+        <details className="run-extra">
+          <summary>未决 / 待人工核实（{result.unresolved.length}）</summary>
+          <ul>
+            {result.unresolved.map((u, i) => (
+              <li key={i}>
+                <code>{u.file}</code>
+                {u.line != null && `:${u.line}`}
+                {u.technology ? ` [${u.technology}]` : ""}：{u.description || "(无描述)"}
+                {u.note && <span className="hint"> — {u.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {(result.errors || []).length > 0 && (
+        <details className="run-extra">
+          <summary>运行错误（{result.errors.length}）</summary>
+          <ul>
+            {result.errors.map((e, i) => (
+              <li key={i}>
+                <span className="badge badge-high">{e.type}</span>{" "}
+                {e.file || e.path || ""}：{e.message}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {(coverage.truncated_files || []).length +
+        (coverage.omitted_files || []).length +
+        (coverage.pending_versions || []).length >
+        0 && (
+        <details className="run-extra">
+          <summary>覆盖详情</summary>
+          <ul>
+            {(coverage.truncated_files || []).length > 0 && (
+              <li>截断文件：{coverage.truncated_files.join("、")}</li>
+            )}
+            {(coverage.omitted_files || []).length > 0 && (
+              <li>未纳入快照的源码文件：{coverage.omitted_files.join("、")}</li>
+            )}
+            {(coverage.pending_versions || []).length > 0 && (
+              <li>待确认版本（未参与版本敏感检索）：{coverage.pending_versions.join("、")}</li>
+            )}
+            {isMigration && coverage.doc_direction?.partitions && (
+              <li>
+                文档方向分区：
+                {coverage.doc_direction.partitions
+                  .map(
+                    (p) =>
+                      `${p.technology} ${p.version}（读取 ${p.read} 块${p.empty ? "，区间无 What's New 文档" : ""}）`
+                  )
+                  .join("；")}
+              </li>
+            )}
+          </ul>
+        </details>
+      )}
+    </>
   );
 }
 
 /**
- * 单个 Review Issue 卡片（规格第 24 节）。
+ * 单个 Review Issue 卡片（规格第 24 节 + V2 状态徽标）。
  */
 function ReviewIssueCard({ issue }) {
   return (
@@ -71,6 +215,7 @@ function ReviewIssueCard({ issue }) {
           {SEVERITY_LABELS[issue.severity]}
         </span>
         <span className="badge badge-category">{CATEGORY_LABELS[issue.category]}</span>
+        <OriginBadges origin={issue.origin} />
         <span className="issue-location">
           <code>{issue.file}</code>
           {issue.line != null && `:${issue.line}`}
@@ -79,7 +224,7 @@ function ReviewIssueCard({ issue }) {
 
       <h4>{issue.title}</h4>
       <p className="issue-desc">{issue.description}</p>
-      <EvidenceBlock evidence={issue.evidence} source={issue.source} />
+      <EvidenceBlock issue={issue} />
       <p className="issue-suggestion">
         <strong>建议：</strong>
         {issue.suggestion}
@@ -94,7 +239,7 @@ function ReviewIssueCard({ issue }) {
 }
 
 /**
- * 单个 Migration Issue 卡片（规格第 19 节：当前行为 / 目标行为 / 原因 / 建议修改）。
+ * 单个 Migration Issue 卡片（规格第 19 节 + V2 置信度/来源徽标）。
  */
 function MigrationIssueCard({ issue }) {
   return (
@@ -106,6 +251,8 @@ function MigrationIssueCard({ issue }) {
         <span className="badge badge-category">
           {issue.technology} {issue.current_version} → {issue.target_version}
         </span>
+        <span className="badge badge-category">置信度 {issue.confidence}</span>
+        <OriginBadges origin={issue.origin} />
         <span className="issue-location">
           <code>{issue.file}</code>
           {issue.line != null && `:${issue.line}`}
@@ -127,7 +274,7 @@ function MigrationIssueCard({ issue }) {
         <strong>原因：</strong>
         {issue.reason}
       </p>
-      <EvidenceBlock evidence={issue.evidence} source={issue.source} />
+      <EvidenceBlock issue={issue} />
       <p className="issue-suggestion">
         <strong>建议修改：</strong>
         {issue.suggested_change}
@@ -142,7 +289,7 @@ function MigrationIssueCard({ issue }) {
 
 /**
  * 结果展示：按 mode 分发 Review / Migration 两种卡片布局。
- * - 顶部：标题 + 总览 + High/Medium/Low 统计
+ * - 顶部：标题 + 摘要 + 运行状态（V2）+ High/Medium/Low 统计
  * - 底部：Copy Project Fix Prompt
  */
 function ReviewResult({ mode, data }) {
@@ -156,10 +303,21 @@ function ReviewResult({ mode, data }) {
     counts[issue.severity] += 1;
   }
 
+  const emptyText =
+    result.status === "complete"
+      ? isMigration
+        ? "已审查范围内未发现需要迁移的改动"
+        : "已审查范围内未发现问题"
+      : isMigration
+        ? "本次运行未产生迁移问题（存在缺口时请查看上方覆盖详情与错误）"
+        : "本次运行未产生问题（存在缺口时请查看上方覆盖详情与错误）";
+
   return (
     <section className="review-result">
       <h2>{isMigration ? "迁移分析结果" : "审查结果"}</h2>
       <p className="summary">{result.summary}</p>
+
+      <RunStatusBlock result={result} isMigration={isMigration} />
 
       <div className="severity-stats">
         <span className="badge badge-high">High {counts.high}</span>
@@ -168,9 +326,7 @@ function ReviewResult({ mode, data }) {
       </div>
 
       {issues.length === 0 ? (
-        <p className="hint">
-          {isMigration ? "未发现需要迁移的改动" : "未发现明显问题"}
-        </p>
+        <p className="hint">{emptyText}</p>
       ) : (
         issues.map((issue, index) =>
           isMigration ? (
