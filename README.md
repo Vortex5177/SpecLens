@@ -15,6 +15,7 @@ https://www.bilibili.com/video/BV1W6tU67EW8/?spm_id_from=333.1387.homepage.video
 - **Migration（双向对照）**：文档方向（检索迁移区间内各版本 What's New，找变更依据）与代码方向（枚举代码实际用法点，逐一验证变更依据）互补；合并输出携带置信度三层：`high` = 双侧印证 / `medium` = 仅文档方向（建议人工复核）/ `low` = 仅代码方向（待商榷）。迁移区间为 `(当前版本, 目标版本]`，一次检索放行整个区间
 - **证据链完整性**：每条结论携带 evidence + source；`llm_inference` 标注由代码强制校验（不得携带证据文字），非法 severity / confidence 值自动回退——宁可丢证据，不留不可追溯的「证据」
 - **Fix Prompt**：每个问题与项目级汇总均由模板确定性生成（不再调 LLM），可直接粘贴给 AI Coding 工具
+- **多模型切换**：任意 OpenAI 兼容服务（DeepSeek / 本地 vLLM / Ollama 等）在「模型设置」页运行时添加与切换，支持端点探测、连通性测试、全局激活与单次请求覆盖，切换立即生效、无需重启
 
 ## 架构
 
@@ -54,18 +55,18 @@ analyze_project ──→ review ──→ generate_result
 | AI 编排 | LangChain / LangGraph（两阶段管线 + `create_agent` 结构化输出） |
 | RAG | BGE-M3（本地 Embedding）+ Qdrant（向量库，按版本元数据前置过滤） |
 | 前端 | React 18 + Vite（开发模式代理 `/api` 到后端） |
-| LLM | DeepSeek API（OpenAI 兼容接口） |
+| LLM | 任意 OpenAI 兼容接口（DeepSeek / 本地 vLLM / Ollama），前端「模型设置」页运行时添加与切换 |
 
 ## 项目结构
 
 ```
 ├── backend/              # FastAPI 后端
 │   └── app/
-│       ├── api/          # 路由层：project / version / knowledge / review / migration / health
+│       ├── api/          # 路由层：project / version / knowledge / review / migration / llm_models / health
 │       ├── graph/        # LangGraph：state、tools、nodes（analyze / review / result / pipeline）
 │       ├── models/       # Pydantic 请求/响应/结构化输出模型
 │       └── services/     # 上传解压、依赖解析、RAG 检索
-├── frontend/             # React + Vite 前端（「分析」板块：上传 → 版本确认 → 审查/迁移；「文档库」板块：知识文档查看 / 上传 / 删除）
+├── frontend/             # React + Vite 前端（「分析」板块：上传 → 版本确认 → 审查/迁移；「文档库」板块：知识文档查看 / 上传 / 删除；「模型设置」板块：多模型管理与切换）
 ├── knowledge/            # 知识库源文件
 │   ├── sources/                             # 官方文档 Source 配置（YAML，定义采集 URL）
 │   ├── official/{technology}/{version}/   # 官方文档（目录结构即元数据）
@@ -81,7 +82,7 @@ analyze_project ──→ review ──→ generate_result
 
 - Python 3.12+、Node.js 18+
 - Qdrant：从 [官方 releases](https://github.com/qdrant/qdrant/releases/latest) 下载可执行文件（Windows / Linux / macOS 均支持），或使用 `docker run -p 6333:6333 qdrant/qdrant`，默认监听 `http://localhost:6333`
-- DeepSeek API Key（或其他兼容 OpenAI 接口的服务）
+- 任一 OpenAI 兼容的 LLM 服务：DeepSeek API Key、本地 vLLM、Ollama 等均可
 
 ### 1. 配置后端环境
 
@@ -90,14 +91,14 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1      # Windows；Linux/macOS 用 source .venv/bin/activate
 pip install -r requirements.txt
-copy .env.example .env             # 然后填入 DEEPSEEK_API_KEY
+copy .env.example .env             # 可选：填入 DEEPSEEK_API_KEY 作为首次启动的默认模型
 ```
 
 `.env` 关键配置：
 
 | 变量 | 说明 |
 |---|---|
-| `DEEPSEEK_API_KEY` | LLM API Key（必填） |
+| `DEEPSEEK_API_KEY` | 可选，仅作首次启动的默认模型种子；之后在前端「模型设置」页管理 |
 | `QDRANT_URL` | 默认 `http://localhost:6333` |
 | `ALLOWED_ORIGINS` | 前端来源，默认 `http://localhost:5173` |
 | `HF_ENDPOINT` | 可选，国内建议 `https://hf-mirror.com` 加速下载 BGE-M3 |
@@ -150,11 +151,32 @@ npm run dev
 
 打开 <http://localhost:5173>，看到「后端已连接」即可使用。
 
+### 4. 配置模型
+
+模型在前端「模型设置」板块管理，支持任意 OpenAI 兼容服务，切换立即生效、无需重启后端：
+
+1. **新增模型**：填写名称、Base URL、API Key、模型名。点「检测模型」可自动探测端点上当前可用的模型列表，点选即可填入
+2. **连通性测试**：用该配置发起一次最小调用，返回延迟与回复摘要，添加后即可验证
+3. **切换**：在列表中将某个模型「激活」为全局默认（所有审查 / 迁移请求默认使用）；分析页发起审查 / 迁移前，也可在下拉框为本次请求单独指定模型（默认「跟随全局」）。页头徽标实时显示当前模型，点击可直达设置页
+
+典型服务接入（Base URL 与模型名示例）：
+
+| 服务 | Base URL | 模型名示例 |
+|---|---|---|
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` |
+| 本地 vLLM | `http://localhost:8000/v1` | 启动时 `--served-model-name` 指定的名称 |
+| Ollama | `http://localhost:11434/v1` | 已拉取的本地标签，如 `qwen2.5:7b` |
+
+说明：
+
+- 配置持久化在 `backend/data/llm_models.json`（已被 `.gitignore` 排除）；接口返回中 API Key 始终打码，编辑时 Key 留空表示不修改
+- 首次启动且无任何模型配置时，`.env` 中的 `DEEPSEEK_API_KEY` 会自动迁移为一条默认模型；完全没有可用模型时发起审查会收到明确提示
+
 ## 使用流程
 
 1. **上传**：两种方式任选——项目 zip（≤50MB），或切换到「直接上传文件」选择多个源码/配置文件（.py、.js、requirements.txt 等，最多 200 个）。页面展示语言 / 依赖文件识别结果与文件树。可用 `python scripts/make_sample.py` 生成测试样例；`scripts/test_legacy_code.py` 是一份包含 Python 3.9 / pandas 2.3 / LangChain 0.2 / Django 5.0 旧版写法的样例，适合演示 Migration
 2. **版本确认**：精确锁定的版本自动采用；范围约束标记为「待确认」，需手动填写并确认。所有技术确认前审查按钮保持禁用
-3. **选择模式并开始**：
+3. **选择模式并开始**：可在模型下拉框为本次请求指定模型（默认「跟随全局」激活模型），然后
    - Code Review：直接点「开始审查」
    - Migration：从下拉框为待迁移技术选择目标版本（选项来自知识库已入库版本），至少一个后点「开始迁移分析」
 4. **查看结果**：严重级别统计 + 问题卡片（文件 / 行号 / 描述 / 可折叠证据 / 建议）；每个问题有 **Copy Fix Prompt**，页面级有 **Copy Project Fix Prompt**；迁移结果额外携带 `confidence` 置信度标注
@@ -182,6 +204,13 @@ Code Review 为同步接口，视嫌疑清单规模约 1~3 分钟；Migration �
 | GET | `/api/reviews/{review_id}` | 查询 Review 结果（含项目级 Fix Prompt） |
 | POST | `/api/migrations` | 创建并同步执行 Migration（含目标版本列表） |
 | GET | `/api/migrations/{migration_id}` | 查询 Migration 结果（含项目级迁移 Fix Prompt） |
+| GET | `/api/llm/models` | 模型列表（Key 打码）与当前激活项 |
+| POST | `/api/llm/models` | 新增模型（列表中第一条自动激活） |
+| PUT | `/api/llm/models/{model_id}` | 更新模型（`api_key` 留空表示不修改） |
+| DELETE | `/api/llm/models/{model_id}` | 删除模型（删除激活项则自动切换到剩余第一条） |
+| POST | `/api/llm/models/{model_id}/activate` | 切换全局激活模型 |
+| POST | `/api/llm/models/{model_id}/test` | 连通性测试（返回延迟与回复摘要） |
+| POST | `/api/llm/models/probe` | 探测端点当前可用的模型列表（添加 / 编辑前选择） |
 
 交互式文档：启动后端后访问 <http://localhost:8000/docs>。
 
@@ -191,6 +220,7 @@ Code Review 为同步接口，视嫌疑清单规模约 1~3 分钟；Migration �
 - Agent 工具全部只读，且限制在项目目录内；官方文档检索强制使用已确认版本，传入未确认版本直接拒绝
 - 证据规则：问题依据必须来自检索结果，无证据时标注 `llm_inference`，禁止伪造官方文档依据；该规则由代码强制执行——`llm_inference` 标注携带的证据文字会被自动清空并压低置信度
 - 管线阶段 1 产出的嫌疑由程序校验：引用不存在的文件、涉及未确认技术的条目直接丢弃
+- 模型配置存储于 `backend/data/llm_models.json`（已被 `.gitignore` 排除），接口返回中 API Key 始终打码，更新时 Key 留空表示保持原值
 
 ## 已知限制
 
