@@ -20,6 +20,8 @@ class ReviewState(TypedDict):
     mode: str
     # Migration 专用（Phase 11）：technology -> 目标版本；code_review 时为空 dict
     target_versions: dict[str, str]
+    # 请求级模型覆盖（为空时使用全局激活模型）
+    model_id: str | None
 
     # analyze_project 填充
     languages: dict[str, int]

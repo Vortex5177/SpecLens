@@ -305,7 +305,7 @@ def _review_with_agent(state: ReviewState, t0: float) -> dict:
         )
 
     print(f"[review] 调用 get_chat_model, t={time.monotonic()-t0:.1f}s", flush=True)
-    model = get_chat_model()
+    model = get_chat_model(state.get("model_id"))
     print(f"[review] 调用 create_agent, t={time.monotonic()-t0:.1f}s", flush=True)
     agent = create_agent(
         model=model,
@@ -378,7 +378,7 @@ def review(state: ReviewState) -> dict:
     """
     t0 = time.monotonic()
     print(f"[review] 开始 review 节点（{state['mode']}）, t={t0:.1f}", flush=True)
-    model = get_chat_model()
+    model = get_chat_model(state.get("model_id"))
 
     if state["mode"] == "migration":
         # 文档方向：原 Agent 路径（规格第 19 节实现，保持不动）

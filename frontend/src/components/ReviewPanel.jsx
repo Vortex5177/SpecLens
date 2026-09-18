@@ -7,8 +7,10 @@ import { useEffect, useState } from "react";
  *   后端对比当前版本与目标版本的规范（规格第 19 节）
  * - 两种模式都是同步接口，耗时可能超过 1 分钟，期间禁用按钮
  */
-function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
+function ReviewPanel({ projectId, versions, reviewEnabled, models, activeModel, onCompleted }) {
   const [mode, setMode] = useState("code_review");
+  // 本次使用的模型："" = 跟随全局激活模型
+  const [modelId, setModelId] = useState("");
   // migration 目标版本输入：technology -> 用户输入
   const [targets, setTargets] = useState(() =>
     Object.fromEntries(versions.map((v) => [v.technology, ""]))
@@ -69,7 +71,7 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
         const res = await fetch("/api/reviews", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project_id: projectId, mode }),
+          body: JSON.stringify({ project_id: projectId, mode, model_id: modelId || null }),
         });
         const data = await res.json();
         if (!res.ok) {
@@ -88,6 +90,7 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
           body: JSON.stringify({
             project_id: projectId,
             target_versions: selectedTargets(),
+            model_id: modelId || null,
           }),
         });
         const data = await res.json();
@@ -135,6 +138,24 @@ function ReviewPanel({ projectId, versions, reviewEnabled, onCompleted }) {
             disabled={running}
           />
           Migration
+        </label>
+      </div>
+
+      <div className="model-select-row">
+        <label>
+          本次使用模型：
+          <select
+            value={modelId}
+            onChange={(e) => setModelId(e.target.value)}
+            disabled={running}
+          >
+            <option value="">跟随全局{activeModel ? `（${activeModel.name}）` : ""}</option>
+            {(models?.models || []).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}（{m.model}）
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 

@@ -11,7 +11,7 @@ import re
 
 from fastapi import APIRouter, HTTPException
 
-from app import config
+from app import config, llm_store
 from app.graph.graph import build_review_graph
 from app.models.schemas import ReviewRequest, ReviewResponse, ReviewResult
 
@@ -31,6 +31,10 @@ def create_review(request: ReviewRequest) -> ReviewResponse:
     if not (project_dir / "meta.json").is_file():
         raise HTTPException(status_code=404, detail="项目不存在，请先上传")
 
+    # 请求级模型覆盖：显式指定则必须存在
+    if request.model_id and llm_store.get_model(request.model_id) is None:
+        raise HTTPException(status_code=400, detail="指定的模型不存在")
+
     graph = build_review_graph()
     try:
         final_state = graph.invoke(
@@ -38,6 +42,7 @@ def create_review(request: ReviewRequest) -> ReviewResponse:
                 "project_id": project_id,
                 "project_path": str(project_dir),
                 "mode": request.mode,
+                "model_id": request.model_id,
             }
         )
     except Exception as exc:  # LLM / 向量库异常不向前端泄露堆栈（规格第 27 节）

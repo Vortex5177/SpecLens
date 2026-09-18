@@ -654,3 +654,153 @@ pre,
   color: var(--fg-muted);
   cursor: pointer;
 }
+
+/* ===== 模型管理（Chatbox 式添加与切换） ===== */
+/* header 右侧容器：模型徽标 + 后端状态 */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* header 当前模型徽标：可点击跳转模型设置页 */
+.model-badge {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+  color: var(--fg-muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.model-badge:hover {
+  color: var(--fg);
+  border-color: var(--fg-subtle);
+}
+
+/* 审查面板：本次使用模型选择 */
+.model-select-row {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.model-select-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-select-row select {
+  cursor: pointer;
+}
+
+/* 模型设置：添加/编辑表单（浅底卡片，与知识库添加表单一致） */
+.model-add {
+  margin: 12px 0 16px;
+  padding: 12px 16px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.model-add h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.model-add-fields {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.model-add-fields input {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+/* 模型表格：行内操作按钮组 */
+.model-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.model-actions button {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.model-actions button:hover:not(:disabled) {
+  background: var(--bg-subtle);
+}
+
+.model-actions button:disabled {
+  color: var(--fg-subtle);
+  cursor: not-allowed;
+}
+
+/* 删除按钮保持全局危险色（覆盖上面的通用次按钮规则） */
+.model-actions .delete-btn {
+  color: var(--danger);
+}
+
+.model-actions .delete-btn:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.model-table code {
+  white-space: nowrap;
+}
+
+.model-active-badge {
+  margin-left: 6px;
+}
+
+.model-test-result {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+/* 编辑行：浅底区隔 */
+.model-edit-row td {
+  background: var(--bg-subtle);
+}
+
+/* 检测模型：候选结果芯片（点击填入模型名） */
+.model-probe-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.model-probe-chips button {
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.model-probe-chips button:hover {
+  background: var(--bg-subtle);
+  border-color: var(--fg-subtle);
+}

@@ -21,6 +21,9 @@ frontend/dist/
 uploads/
 *.db
 
+# ===== 模型配置（含 API Key，禁止提交）=====
+backend/data/
+
 # ===== 测试样例 =====
 test_sample/
 

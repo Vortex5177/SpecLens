@@ -16,7 +16,7 @@ import re
 
 from fastapi import APIRouter, HTTPException
 
-from app import config
+from app import config, llm_store
 from app.graph.graph import build_review_graph
 from app.models.schemas import (
     MigrationRequest,
@@ -45,6 +45,10 @@ def create_migration(request: MigrationRequest) -> MigrationResponse:
     # 列表去重转 dict（后者覆盖前者）
     target_versions = {v.technology.lower(): v.version for v in request.target_versions}
 
+    # 请求级模型覆盖：显式指定则必须存在
+    if request.model_id and llm_store.get_model(request.model_id) is None:
+        raise HTTPException(status_code=400, detail="指定的模型不存在")
+
     # 与 Review 共用同一条流水线（规格第 19 节），仅 mode 与目标版本不同
     graph = build_review_graph()
     try:
@@ -54,6 +58,7 @@ def create_migration(request: MigrationRequest) -> MigrationResponse:
                 "project_path": str(project_dir),
                 "mode": "migration",
                 "target_versions": target_versions,
+                "model_id": request.model_id,
             }
         )
     except Exception as exc:  # LLM / 向量库异常不向前端泄露堆栈（规格第 27 节）

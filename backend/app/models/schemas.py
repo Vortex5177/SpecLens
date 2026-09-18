@@ -109,6 +109,8 @@ class ReviewRequest(BaseModel):
 
     project_id: str
     mode: Literal["code_review"] = "code_review"
+    # 请求级模型覆盖；为空时使用全局激活模型
+    model_id: str | None = None
 
 
 class ReviewResponse(BaseModel):
@@ -174,6 +176,8 @@ class MigrationRequest(BaseModel):
     project_id: str
     # 复用 VersionSelection（technology + version），此处 version 为目标版本
     target_versions: list[VersionSelection]
+    # 请求级模型覆盖；为空时使用全局激活模型
+    model_id: str | None = None
 
 
 class MigrationResponse(BaseModel):

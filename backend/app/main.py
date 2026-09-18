@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
 from app.api.knowledge import router as knowledge_router
+from app.api.llm_models import router as llm_router
 from app.api.migration import router as migration_router
 from app.api.project import router as project_router
 from app.api.review import router as review_router
@@ -36,6 +37,7 @@ app.add_middleware(
 
 # 路由分组注册
 app.include_router(health_router, prefix="/api")
+app.include_router(llm_router, prefix="/api")
 app.include_router(version_router, prefix="/api")
 app.include_router(project_router, prefix="/api")
 app.include_router(review_router, prefix="/api")

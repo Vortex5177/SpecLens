@@ -15,6 +15,10 @@ langgraph>=1.2
 # DeepSeek 兼容 OpenAI 接口，经 init_chat_model 统一入口接入
 langchain-openai>=0.3
 
+# 模型列表探测（模型设置页“检测模型”：GET {base_url}/v1/models）
+# openai SDK 已传递安装 httpx，此处显式声明避免仅靠传递依赖
+httpx>=0.27
+
 # Qdrant 向量库（Phase 4 RAG；连接本地原生运行的 Qdrant 服务，非嵌入式）
 # langchain-qdrant 是 LangChain 1.x 官方推荐的集成包（旧 langchain_community.vectorstores.Qdrant 已废弃）
 qdrant-client>=1.19
